@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/**
+ * Design tokens (Ch 11 §11.2).
+ * Named by MEANING (--negative), not by value (--red-500), so a theme can be
+ * retuned without touching a single component. Light + dark are both first-class.
+ */
+:root {
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #e5e6ec;
+  --text: #14151a;
+  --text-muted: #676c7a;
+  --primary: #0e7c86; /* calm blue-teal — trust, deliberately not "AI purple" */
+  --primary-contrast: #ffffff;
+  --positive: #0d7a53;
+  --negative: #b4293d;
+  --warning: #9a6206;
+
+  --radius-sm: 0.375rem;
+  --radius: 0.625rem;
+  --radius-lg: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0c0f;
+    --surface: #14161b;
+    --surface-raised: #1a1d24;
+    --border: #272b35;
+    --text: #f2f3f6;
+    --text-muted: #99a0ad;
+    --primary: #35b3bd;
+    --primary-contrast: #04252a;
+    --positive: #3ecf8e;
+    --negative: #f2617a;
+    --warning: #e3a53d;
+  }
+}
+
+/* Explicit override wins over the OS preference (theme toggle, Ch 11). */
+:root[data-theme="dark"] {
+  --bg: #0b0c0f;
+  --surface: #14161b;
+  --surface-raised: #1a1d24;
+  --border: #272b35;
+  --text: #f2f3f6;
+  --text-muted: #99a0ad;
+  --primary: #35b3bd;
+  --primary-contrast: #04252a;
+  --positive: #3ecf8e;
+  --negative: #f2617a;
+  --warning: #e3a53d;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  /* Tabular figures so money columns align — non-negotiable in a finance app. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}

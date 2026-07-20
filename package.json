@@ -1,0 +1,23 @@
+{
+  "name": "ai-wealth-os",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AI-first personal financial operating system",
+  "workspaces": [
+    "api",
+    "web",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w @ai-wealth-os/api",
+    "dev:web": "npm run dev -w @ai-wealth-os/web",
+    "typecheck": "npm run typecheck -w @ai-wealth-os/api && npm run typecheck -w @ai-wealth-os/web",
+    "test": "npm test -w @ai-wealth-os/api",
+    "db:migrate": "npm run prisma:migrate -w @ai-wealth-os/api",
+    "db:seed": "npm run db:seed -w @ai-wealth-os/api",
+    "db:studio": "npm run prisma:studio -w @ai-wealth-os/api"
+  }
+}

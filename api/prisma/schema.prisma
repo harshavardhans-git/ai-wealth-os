@@ -1,0 +1,165 @@
+// AI Wealth OS — database schema (Ch 5).
+// Conventions: PascalCase models → snake_case tables (@@map); camelCase fields →
+// snake_case columns (@map). Money is BigInt minor units (Ch 5 D1) — the repository
+// layer converts BigInt→number at the API edge; the wire type is `number`.
+//
+// NOTE (follow-up migration): `type` / `kind` / `source` / `status` / `period` are
+// String columns whose allowed values live in @ai-wealth-os/types (single source of
+// truth). Add PG CHECK constraints for them via a raw-SQL migration after `migrate dev`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique // normalized lowercase in the auth service (CITEXT alt.)
+  passwordHash String  @map("password_hash")
+  name         String
+  baseCurrency String  @default("INR") @map("base_currency") @db.Char(3)
+  isDemo       Boolean @default(false) @map("is_demo")
+  tokenVersion Int     @default(0) @map("token_version") // Ch 10 refresh revocation
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  importBatches ImportBatch[]
+  aiParseLogs   AiParseLog[]
+
+  @@map("users")
+}
+
+model Account {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  name                String
+  type                String // 'cash' | 'bank' | 'card' | 'wallet'
+  currency            String    @db.Char(3)
+  openingBalanceMinor BigInt    @default(0) @map("opening_balance_minor")
+  isArchived          Boolean   @default(false) @map("is_archived")
+  deletedAt           DateTime? @map("deleted_at") // soft delete (Ch 5 D4)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Category {
+  id        String  @id @default(uuid()) @db.Uuid
+  userId    String? @map("user_id") @db.Uuid // NULL = shared system default (Ch 5)
+  name      String
+  kind      String // 'income' | 'expense'
+  icon      String?
+  color     String?
+  isSystem  Boolean @default(false) @map("is_system")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User?         @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([userId, name, kind])
+  @@index([userId])
+  @@map("categories")
+}
+
+model Transaction {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  categoryId      String?   @map("category_id") @db.Uuid
+  type            String // 'income' | 'expense' | 'transfer'
+  amountMinor     BigInt    @map("amount_minor") // always > 0; direction via `type`
+  currency        String    @db.Char(3)
+  amountBaseMinor BigInt    @map("amount_base_minor") // in user's base currency (Ch 5 §5.5)
+  occurredAt      DateTime  @map("occurred_at") // when it happened, not when logged
+  note            String?
+  source          String    @default("manual") // 'manual' | 'ai' | 'import'
+  transferGroupId String?   @map("transfer_group_id") @db.Uuid // links a transfer pair
+  importBatchId   String?   @map("import_batch_id") @db.Uuid
+  deletedAt       DateTime? @map("deleted_at") // soft delete (Ch 5 D4)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user        User         @relation(fields: [userId], references: [id])
+  account     Account      @relation(fields: [accountId], references: [id])
+  category    Category?    @relation(fields: [categoryId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  // Indexes derived from real screen queries (Ch 5 §5.6)
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([userId, categoryId, occurredAt])
+  @@index([accountId])
+  @@map("transactions")
+}
+
+model Budget {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  categoryId  String   @map("category_id") @db.Uuid
+  period      String   @default("monthly") // v1 = monthly only
+  amountMinor BigInt   @map("amount_minor")
+  currency    String   @db.Char(3)
+  startsOn    DateTime @map("starts_on") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, period, startsOn])
+  @@index([userId])
+  @@map("budgets")
+}
+
+model ImportBatch {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  filename String
+  rowCount Int    @map("row_count")
+  status   String @default("pending") // 'pending' | 'committed' | 'reverted'
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("import_batches")
+}
+
+model AiParseLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  inputText  String   @map("input_text")
+  parsedJson Json     @map("parsed_json") // raw model output (Ch 9 §9.5)
+  model      String
+  confidence Decimal? @db.Decimal(4, 3)
+  tokens     Int?
+  accepted   Boolean? // did the user save the AI draft? (wedge metric)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("ai_parse_logs")
+}
