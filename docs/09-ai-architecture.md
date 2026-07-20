@@ -1,7 +1,23 @@
-# Chapter 9 — AI Architecture (the flagship)
+# Chapter 9 — Capture Architecture (the flagship)
 
-> Status: **Draft for review** · Depends on: Ch 3 (A1 spec), Ch 5 (`ai_parse_logs`), Ch 6 (AI provider, demo mode), Ch 7 (adapter layer)
-> Model/pricing facts verified against the current Claude API reference (cached 2026-06-24).
+> ## ⚠️ SUPERSEDED — read [Chapter 16 · ADR-001](./16-decision-log.md) first
+>
+> **This chapter designs the flagship around a hosted language model. That is not
+> what was built.** During Sprint 4 we concluded the model was not load-bearing:
+> `"coffee 250 yesterday"` is a *bounded extraction* problem, so it ships as a
+> **deterministic parser** — ₹0 per capture, no vendor account, no key to leak,
+> and fully unit-testable (22 cases).
+>
+> **The chapter is kept as written rather than rewritten.** The design reasoning
+> below is still what shaped the implementation — and critically, **every guardrail
+> in §9.6 survived the change unaltered**, because none of them were ever really
+> about the model. That is the most useful thing in here.
+>
+> Where this chapter says "the model", the shipped code says "the parser". Where it
+> says `ClaudeAdapter`, the shipped code has `capture.parser.ts` behind the same
+> single-function seam. `ai_parse_logs` is now `capture_logs`.
+
+> Status: **Superseded by ADR-001** · Depends on: Ch 3 (A1 spec), Ch 5, Ch 6, Ch 7
 
 This is the chapter that earns the product its name. Everything else is a competent
 finance app; **this** is what makes it "AI-first." We design the flagship feature —

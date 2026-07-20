@@ -30,7 +30,7 @@ export function CashFlowChart({
 
   return (
     <div>
-      <div className="mb-4 flex gap-4 text-xs text-[var(--text-muted)]">
+      <div aria-hidden className="mb-4 flex gap-4 text-xs text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5">
           <i
             aria-hidden
@@ -47,7 +47,30 @@ export function CashFlowChart({
         </span>
       </div>
 
-      <div className="flex h-40 items-end gap-3">
+      {/* The dataviz method's "a table view exists" relief: bars built from divs
+          are invisible to a screen reader, so the same numbers are also available
+          as a real table, hidden visually but fully readable. */}
+      <table className="sr-only">
+        <caption>Income and expense for the last six months</caption>
+        <thead>
+          <tr>
+            <th scope="col">Month</th>
+            <th scope="col">Income</th>
+            <th scope="col">Expense</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((point) => (
+            <tr key={point.month}>
+              <th scope="row">{monthLabel(point.month)}</th>
+              <td>{formatMoney(point.incomeMinor, currency)}</td>
+              <td>{formatMoney(point.expenseMinor, currency)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div aria-hidden className="flex h-40 items-end gap-3">
         {data.map((point) => (
           <div
             key={point.month}

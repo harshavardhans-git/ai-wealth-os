@@ -42,6 +42,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-full flex-1">
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
+
       <aside className="hidden w-56 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] p-4 sm:flex sm:flex-col">
         <Link
           href="/app"
@@ -86,7 +90,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
+        <main id="main" className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
           {children}
         </main>
       </div>

@@ -1,6 +1,12 @@
 # Chapter 1 — Product Vision, Mission, Problem & Target Users
 
-> Status: **Draft for review** · Depends on: Chapter 0 (Charter)
+> Status: **Amended** · Depends on: Chapter 0 (Charter)
+>
+> **Amended:** this chapter positions the product as "AI-first". The shipped
+> capture feature is a deterministic parser, so that positioning was dropped and
+> the product renamed — see [Chapter 16 · ADR-001/002](./16-decision-log.md).
+> The *problem* framing below — the understanding gap — is unchanged and is still
+> what the product is built around.
 
 ---
 

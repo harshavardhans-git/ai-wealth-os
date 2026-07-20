@@ -30,6 +30,8 @@ export function QuickCapture() {
   const [isBusy, setIsBusy] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const queryClient = useQueryClient();
   const accounts = useAccounts(isOpen);
   const categories = useCategories(isOpen);
@@ -48,14 +50,42 @@ export function QuickCapture() {
   }, []);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
+    if (isOpen) {
+      // Remember where focus came from so we can put it back on close —
+      // without this, closing the dialog dumps a keyboard user at the top of
+      // the document with no idea where they are.
+      returnFocusRef.current = document.activeElement as HTMLElement | null;
+      inputRef.current?.focus();
+    }
   }, [isOpen]);
+
+  /** Keeps Tab inside the dialog while it's open (a modal must not leak focus). */
+  function trapFocus(event: React.KeyboardEvent) {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function close() {
     setIsOpen(false);
     setText("");
     setDraft(null);
     setError(null);
+    returnFocusRef.current?.focus();
   }
 
   async function handleParse(event: React.FormEvent) {
@@ -147,7 +177,11 @@ export function QuickCapture() {
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 pt-24"
           onClick={(event) => event.target === event.currentTarget && close()}
         >
-          <div className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl">
+          <div
+            ref={dialogRef}
+            onKeyDown={trapFocus}
+            className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl"
+          >
             <form onSubmit={handleParse}>
               <label htmlFor="capture-input" className="text-sm font-medium">
                 Type what you spent

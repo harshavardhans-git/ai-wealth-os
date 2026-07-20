@@ -1,6 +1,10 @@
 # Chapter 0 — Architecture Charter
 
-> Status: **Locked** · Owner: CTO + Dheeraj · This charter governs all later chapters.
+> Status: **Locked**, with two amendments · This charter governs all later chapters.
+>
+> **Amended:** the flagship ships as a deterministic parser rather than an LLM, and
+> the project was renamed from "AI Wealth OS" to "Wealth OS". See
+> [Chapter 16 · ADR-001 and ADR-002](./16-decision-log.md).
 
 ## Context
 

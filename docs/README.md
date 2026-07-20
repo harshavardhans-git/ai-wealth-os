@@ -19,13 +19,14 @@ chapter ends with locked decisions, open questions, risks, and CTO recommendatio
 | 06 | [System Architecture](./06-system-architecture.md) | Components, the API contract, request lifecycles, async seam |
 | 07 | [Backend Architecture](./07-backend-architecture.md) | Layers, folders, middleware pipeline, endpoint contract |
 | 08 | [Frontend Architecture](./08-frontend-architecture.md) | Server/client split, three kinds of state, component tiers |
-| 09 | [AI Architecture](./09-ai-architecture.md) | The flagship: adapter, structured output, guardrails, demo mode |
+| 09 | [Capture Architecture](./09-ai-architecture.md) ⚠️ | The flagship's design — **superseded**, see Ch 16 · ADR-001 |
 | 10 | [Auth Flow & Authorization](./10-auth-and-authorization.md) | JWT scheme, refresh rotation, ownership-based authz |
 | 11 | [Design System & Wireframes](./11-design-system-wireframes.md) | Tokens, dark mode, `MoneyText`, hero-screen wireframes, seed data |
 | 12 | [Security Model](./12-security-model.md) | Threat model, control map, AI posture, explicit non-goals |
 | 13 | [Testing Strategy](./13-testing-strategy.md) | Invariant-driven pyramid, the 9 must-have tests |
 | 14 | [Deployment & Scaling](./14-deployment-scaling.md) | Free-tier topology, CI/CD, the honest scaling story |
 | 15 | [Development & Future Roadmap](./15-development-future-roadmap.md) | 6-sprint build order, DoD gate, Phase 2–4 vision |
+| **16** | **[Decision Log](./16-decision-log.md)** | **What changed during implementation, and why** — the parser vs LLM call, the rename, no charting library, the palette that failed validation |
 
 ## The through-lines
 
@@ -33,5 +34,5 @@ A few decisions, made once, reappear correctly across the whole design:
 
 - **`user_id` scoping** → authorization model (10) + top security control (12) + a must-have test (13)
 - **Integer minor-unit money** → schema (05) + `MoneyText` UI (11) + the first test (13)
-- **The AI adapter discipline** → flagship (09) + security posture (12) + template for all future AI features (15)
+- **The capture guardrails** → flagship (09) + security posture (12) — and they held *unchanged* when the LLM was replaced by a parser (16), which is the proof they were designed around the right thing
 - **Stateless API + async seam** (06) → pre-paid the scaling story (14)

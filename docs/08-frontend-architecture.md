@@ -1,6 +1,9 @@
 # Chapter 8 — Frontend Architecture
 
-> Status: **Draft for review** · Depends on: Ch 4 (screens), Ch 6 (contract), Ch 7 (API)
+> Status: **Amended** · Depends on: Ch 4 (screens), Ch 6 (contract), Ch 7 (API)
+>
+> **Amended:** §8.9 chose Recharts; the shipped charts are hand-built CSS/SVG.
+> See [Chapter 16 · ADR-003](./16-decision-log.md).
 > Links forward: Ch 10 (token storage), Ch 11 (design system)
 
 This opens the "Next.js client" box. The goal: a UI that is **fast**, **type-safe
