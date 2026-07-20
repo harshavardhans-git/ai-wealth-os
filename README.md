@@ -3,7 +3,13 @@
 > An AI-first **personal financial operating system** — type one sentence, get a
 > categorized transaction. Understand your money without spreadsheets or bank lock-in.
 
-**Status:** 🏗️ Architecture complete (16-chapter blueprint in [`/docs`](./docs)) · build phase starting.
+### ▶ [Live demo](https://ai-wealth-os-web.vercel.app) · [API health](https://ai-wealth-os-api.onrender.com/health)
+
+> The API runs on a free tier that sleeps when idle — **the first request may take
+> ~30 seconds** to wake it. Hit the health link first if the app looks stuck.
+
+**Status:** deployed and working. Core money tracking is complete; the AI capture
+feature is next. Full architecture in [`/docs`](./docs/README.md).
 
 ---
 
@@ -46,9 +52,22 @@ product before building it.
 
 ## Local development
 
-> Coming as the build progresses. The app deploys on free tiers; the API's free host
-> sleeps on idle, so hit `/health` to warm it before a demo. Copy `.env.example` →
-> `.env` and fill in the values (never commit `.env`).
+```bash
+npm install                       # installs all workspaces
+cp .env.example api/.env          # then fill in DATABASE_URL + JWT secrets
+npm run db:migrate                # apply the schema
+npm run db:seed                   # 18 system categories
+
+npm run dev:api                   # terminal 1 → :4000
+npm run dev:web                   # terminal 2 → :3000
+```
+
+```bash
+npm test                          # invariant tests (money exactness, …)
+npm run typecheck                 # both workspaces
+```
+
+Deployment runbook: [`DEPLOY.md`](./DEPLOY.md).
 
 ---
 

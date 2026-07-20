@@ -86,6 +86,44 @@ export interface ParsedTransactionDraft {
   confidence: number; // 0–1; drives the draft-vs-manual-form choice (Ch 9)
 }
 
+/** Budget progress is COMPUTED on read, never stored (Ch 5 §5.4). */
+export interface BudgetWithProgress extends Budget {
+  categoryName: string;
+  categoryColor: string | null;
+  spentMinor: MoneyMinor;
+  remainingMinor: MoneyMinor;
+  /** 0–100+, clamped at neither end: >100 means over budget. */
+  percentUsed: number;
+}
+
+// ── Dashboard read-model (Ch 6/7: aggregates, not raw rows) ───────────────────
+export interface CategorySpend {
+  categoryId: UUID | null;
+  name: string;
+  color: string | null;
+  amountMinor: MoneyMinor;
+}
+
+export interface CashFlowPoint {
+  month: string; // "2026-07"
+  incomeMinor: MoneyMinor;
+  expenseMinor: MoneyMinor;
+}
+
+export interface DashboardSummary {
+  baseCurrency: CurrencyCode;
+  netWorthMinor: MoneyMinor;
+  month: {
+    label: string; // "July 2026"
+    incomeMinor: MoneyMinor;
+    expenseMinor: MoneyMinor;
+    netMinor: MoneyMinor;
+  };
+  spendByCategory: CategorySpend[];
+  cashFlow: CashFlowPoint[];
+  budgets: BudgetWithProgress[];
+}
+
 // ── List responses ────────────────────────────────────────────────────────────
 export interface Paginated<T> {
   items: T[];

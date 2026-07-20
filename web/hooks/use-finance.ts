@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AccountWithBalance,
+  BudgetWithProgress,
   Category,
+  DashboardSummary,
   Paginated,
   Transaction,
 } from "@ai-wealth-os/types";
@@ -18,9 +20,62 @@ import { apiFetch } from "@/lib/api-client";
 export const queryKeys = {
   accounts: ["accounts"] as const,
   categories: ["categories"] as const,
+  budgets: ["budgets"] as const,
+  dashboard: ["dashboard"] as const,
   transactions: (filters?: Record<string, unknown>) =>
     ["transactions", filters ?? {}] as const,
 };
+
+/**
+ * Anything that changes money changes the dashboard too. Collecting the
+ * invalidations here keeps every mutation honest — a stale dashboard after a
+ * write is the most common bug in a Query codebase (Ch 8 R1).
+ */
+function invalidateMoney(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ["transactions"] });
+  queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+  queryClient.invalidateQueries({ queryKey: queryKeys.budgets });
+  queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+}
+
+export function useDashboard(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => apiFetch<DashboardSummary>("/dashboard/summary"),
+    enabled,
+  });
+}
+
+export function useBudgets(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.budgets,
+    queryFn: () => apiFetch<BudgetWithProgress[]>("/budgets"),
+    enabled,
+  });
+}
+
+export function useCreateBudget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: { categoryId: string; amount: string }) =>
+      apiFetch<BudgetWithProgress>("/budgets", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => invalidateMoney(queryClient),
+  });
+}
+
+export function useDeleteBudget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<void>(`/budgets/${id}`, { method: "DELETE" }),
+    onSuccess: () => invalidateMoney(queryClient),
+  });
+}
 
 export function useAccounts(enabled = true) {
   return useQuery({
@@ -73,9 +128,7 @@ export function useCreateAccount() {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-    },
+    onSuccess: () => invalidateMoney(queryClient),
   });
 }
 
@@ -97,11 +150,7 @@ export function useCreateTransaction() {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    onSuccess: () => {
-      // A new transaction changes both the ledger AND every account balance.
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-    },
+    onSuccess: () => invalidateMoney(queryClient),
   });
 }
 

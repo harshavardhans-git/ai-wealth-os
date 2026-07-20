@@ -21,6 +21,25 @@
   --radius-sm: 0.375rem;
   --radius: 0.625rem;
   --radius-lg: 1rem;
+
+  /* ── Chart palette ──────────────────────────────────────────────────────
+     Validated with the data-viz validator, not chosen by eye. Notably the
+     obvious choice for income/expense — our semantic green/red — FAILED
+     colour-blind separation (deutan ΔE 4.4, target ≥8): the two bars would be
+     near-identical to a red-green colourblind reader. Blue/orange passes with
+     ΔE 24.7. Text keeps green/red because MoneyText always renders an explicit
+     +/− sign, so colour is never the only signal there. */
+  --chart-income: #2a78d6;
+  --chart-expense: #eb6834;
+
+  /* Categorical slots, fixed order — assigned by entity, never cycled. */
+  --series-1: #2a78d6;
+  --series-2: #008300;
+  --series-3: #e87ba4;
+  --series-4: #eda100;
+  --series-5: #1baf7a;
+  --series-6: #eb6834;
+  --series-other: #7a8290;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,6 +55,18 @@
     --positive: #3ecf8e;
     --negative: #f2617a;
     --warning: #e3a53d;
+
+    /* Dark steps are separately validated against the dark surface —
+       not an automatic flip of the light values. */
+    --chart-income: #3987e5;
+    --chart-expense: #d95926;
+    --series-1: #3987e5;
+    --series-2: #008300;
+    --series-3: #d55181;
+    --series-4: #c98500;
+    --series-5: #199e70;
+    --series-6: #d95926;
+    --series-other: #8b93a1;
   }
 }
 
@@ -52,6 +83,16 @@
   --positive: #3ecf8e;
   --negative: #f2617a;
   --warning: #e3a53d;
+
+  --chart-income: #3987e5;
+  --chart-expense: #d95926;
+  --series-1: #3987e5;
+  --series-2: #008300;
+  --series-3: #d55181;
+  --series-4: #c98500;
+  --series-5: #199e70;
+  --series-6: #d95926;
+  --series-other: #8b93a1;
 }
 
 @theme inline {
