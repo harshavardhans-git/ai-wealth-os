@@ -39,6 +39,10 @@ export function createApp(): Express {
     limit: 30,
     standardHeaders: true,
     legacyHeaders: false,
+    // The integration suite signs up many users in seconds and would trip the
+    // limiter. Disabling it in tests keeps the limiter honest in every
+    // environment that matters, rather than weakening it globally.
+    skip: () => env.NODE_ENV === "test",
   });
 
   const apiV1 = express.Router();

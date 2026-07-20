@@ -9,25 +9,59 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
+    # A throwaway Postgres for the integration suite, so tests never touch the
+    # real database and every run starts from a known-empty state.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wealth_os_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/wealth_os_test
+      JWT_ACCESS_SECRET: ci-only-access-secret-not-used-anywhere-real
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-not-used-anywhere-real
+      WEB_ORIGIN: http://localhost:3000
+      NODE_ENV: test
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Apply migrations
+        run: npx prisma migrate deploy --schema api/prisma/schema.prisma
+
       - name: Generate Prisma client
         run: npx prisma generate --schema api/prisma/schema.prisma
+
+      - name: Seed system categories
+        run: npm run db:seed
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
+      - name: Tests (unit + invariant suite)
         run: npm test
+
+      - name: Build web
+        run: npm run build -w @wealth-os/web
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
