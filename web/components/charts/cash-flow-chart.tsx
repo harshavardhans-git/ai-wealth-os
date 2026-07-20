@@ -1,4 +1,4 @@
-import type { CashFlowPoint } from "@ai-wealth-os/types";
+import type { CashFlowPoint } from "@wealth-os/types";
 import { formatMoney } from "@/lib/money";
 
 /**

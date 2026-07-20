@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ParsedTransactionDraft } from "@ai-wealth-os/types";
+import type { ParsedTransactionDraft } from "@wealth-os/types";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { MoneyText } from "@/components/patterns/money-text";

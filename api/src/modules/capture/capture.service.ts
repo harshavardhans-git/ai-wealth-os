@@ -1,4 +1,4 @@
-import type { ParsedTransactionDraft } from "@ai-wealth-os/types";
+import type { ParsedTransactionDraft } from "@wealth-os/types";
 import { AppError } from "../../lib/app-error";
 import { toMinor } from "../../lib/money";
 import { prisma } from "../../lib/prisma";
@@ -91,12 +91,12 @@ export const captureService = {
     };
 
     // Guardrail 4: measure the wedge instead of assuming it works.
-    await prisma.aiParseLog.create({
+    await prisma.captureLog.create({
       data: {
         userId,
         inputText: text,
         parsedJson: result as unknown as object,
-        model: "rule-based-v1",
+        parser: "rule-based-v1",
         confidence: draft.confidence,
         accepted: null, // set when the user saves the draft
       },
@@ -107,12 +107,12 @@ export const captureService = {
 
   /** Records that a draft was actually saved — the acceptance-rate metric. */
   async markAccepted(userId: string, inputText: string): Promise<void> {
-    const latest = await prisma.aiParseLog.findFirst({
+    const latest = await prisma.captureLog.findFirst({
       where: { userId, inputText },
       orderBy: { createdAt: "desc" },
     });
     if (latest) {
-      await prisma.aiParseLog.update({
+      await prisma.captureLog.update({
         where: { id: latest.id },
         data: { accepted: true },
       });

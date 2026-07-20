@@ -8,7 +8,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Wealth OS",
+  title: "Wealth OS",
   description:
     "An AI-first personal financial operating system — type one sentence, get a categorized transaction.",
 };

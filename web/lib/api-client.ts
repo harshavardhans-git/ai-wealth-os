@@ -1,10 +1,10 @@
-import type { ApiResponse } from "@ai-wealth-os/types";
+import type { ApiResponse } from "@wealth-os/types";
 
 /**
  * The typed API client (Ch 8 §8.4).
  * Every network call goes through here so that auth headers, the response envelope,
  * and error shaping are handled in exactly one place. Return types come from
- * @ai-wealth-os/types, so a backend contract change breaks the build here.
+ * @wealth-os/types, so a backend contract change breaks the build here.
  */
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";

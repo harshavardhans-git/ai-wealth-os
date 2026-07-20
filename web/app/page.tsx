@@ -33,7 +33,7 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-6 py-16">
       <header className="space-y-3">
         <p className="text-sm font-medium uppercase tracking-wide text-[var(--primary)]">
-          AI Wealth OS
+          Wealth OS
         </p>
         <h1 className="text-4xl font-semibold tracking-tight">
           Your money, understood.

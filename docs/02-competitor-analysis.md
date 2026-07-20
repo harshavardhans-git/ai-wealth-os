@@ -68,7 +68,7 @@ each and rejects their core constraint.
 
 Illustrative, positioning-oriented. ✅ strong · 🟡 partial/paid · ❌ absent/weak.
 
-| Capability | Trackers (YNAB) | Neobanks (Fi/Jupiter) | Aggregators (INDmoney/Monarch) | **AI Wealth OS (v1 → roadmap)** |
+| Capability | Trackers (YNAB) | Neobanks (Fi/Jupiter) | Aggregators (INDmoney/Monarch) | **Wealth OS (v1 → roadmap)** |
 |---|:--:|:--:|:--:|:--:|
 | Delightful UX | 🟡 | ✅ | 🟡 | ✅ |
 | Effortless entry (natural language) | ❌ | ❌ | ❌ | ✅ **(wedge)** |
@@ -104,7 +104,7 @@ quadrantChart
     "Old Mint": [0.45, 0.30]
     "Fi / Jupiter": [0.80, 0.40]
     "INDmoney / Monarch": [0.40, 0.65]
-    "AI Wealth OS": [0.85, 0.85]
+    "Wealth OS": [0.85, 0.85]
 ```
 
 We deliberately aim for the **top-right (low-effort + high-guidance)** corner — the
@@ -122,7 +122,7 @@ requires exactly our bet: **AI as the interface**, not integrations as the moat.
 
 ## 2.5 Our positioning statement
 
-> **AI Wealth OS is the AI-first financial workspace for people who want to
+> **Wealth OS is the AI-first financial workspace for people who want to
 > understand their money without the effort of spreadsheets or the lock-in of a
 > bank app. You bring your data — by sentence, or by CSV — and it does the
 > thinking.**

@@ -37,7 +37,7 @@ export default function LoginPage() {
           href="/"
           className="text-sm font-medium uppercase tracking-wide text-[var(--primary)]"
         >
-          AI Wealth OS
+          Wealth OS
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
       </div>

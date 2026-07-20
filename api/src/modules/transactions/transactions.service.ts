@@ -6,7 +6,7 @@ import type {
   TransactionSource,
   TransactionType,
   TransferDirection,
-} from "@ai-wealth-os/types";
+} from "@wealth-os/types";
 import { AppError } from "../../lib/app-error";
 import { bigIntToNumber, toMinor } from "../../lib/money";
 import { convertMinor } from "../../lib/fx";

@@ -47,7 +47,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           href="/app"
           className="mb-6 block px-2 text-sm font-semibold tracking-tight"
         >
-          <span className="text-[var(--primary)]">◆</span> AI Wealth OS
+          <span className="text-[var(--primary)]">◆</span> Wealth OS
         </Link>
 
         <nav className="flex flex-col gap-1">

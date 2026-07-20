@@ -1,4 +1,4 @@
-import type { BudgetWithProgress } from "@ai-wealth-os/types";
+import type { BudgetWithProgress } from "@wealth-os/types";
 import { formatMoney } from "@/lib/money";
 
 /**

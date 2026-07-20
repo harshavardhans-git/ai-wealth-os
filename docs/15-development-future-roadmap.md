@@ -131,7 +131,7 @@ Success for this portfolio project (Ch 1 §1.7), restated as a finish line:
 
 ## 🏁 Blueprint complete
 
-That's all 16 chapters. From the Chapter 0 charter to this build order, **AI Wealth OS is
+That's all 16 chapters. From the Chapter 0 charter to this build order, **Wealth OS is
 now a complete, internally-consistent architecture** a developer could execute without
 major restructuring — the goal set in Chapter 0.
 

@@ -1,5 +1,5 @@
 import type { Account as AccountRow } from "@prisma/client";
-import type { Account, AccountWithBalance, AccountType } from "@ai-wealth-os/types";
+import type { Account, AccountWithBalance, AccountType } from "@wealth-os/types";
 import { AppError } from "../../lib/app-error";
 import { bigIntToNumber, toMinor } from "../../lib/money";
 import { accountsRepository } from "./accounts.repository";

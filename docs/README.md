@@ -1,6 +1,6 @@
-# AI Wealth OS — Architecture Blueprint
+# Wealth OS — Architecture Blueprint
 
-The complete pre-build architecture for AI Wealth OS, written chapter by chapter. Each
+The complete pre-build architecture for Wealth OS, written chapter by chapter. Each
 chapter ends with locked decisions, open questions, risks, and CTO recommendations.
 
 > **How to read this:** Chapters build on each other. Ch 0 sets the constraints; Ch 1–3

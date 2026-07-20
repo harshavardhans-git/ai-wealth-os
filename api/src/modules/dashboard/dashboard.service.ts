@@ -1,4 +1,4 @@
-import type { DashboardSummary } from "@ai-wealth-os/types";
+import type { DashboardSummary } from "@wealth-os/types";
 import { AppError } from "../../lib/app-error";
 import { convertMinor } from "../../lib/fx";
 import { bigIntToNumber } from "../../lib/money";

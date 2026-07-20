@@ -6,13 +6,13 @@
 
 ## 1.1 One-line positioning
 
-> **AI Wealth OS is the personal financial operating system that turns scattered money data into clear decisions — an AI CFO in your pocket.**
+> **Wealth OS is the personal financial operating system that turns scattered money data into clear decisions — an AI CFO in your pocket.**
 
 Positioning template (for pitch/README use):
 
 - **For** people who feel anxious and disorganized about money
 - **who** are tired of spreadsheets and passive tracking apps,
-- **AI Wealth OS is** a personal financial operating system
+- **Wealth OS is** a personal financial operating system
 - **that** understands their finances in plain language and tells them what to do next,
 - **unlike** expense trackers that only *record* the past,
 - **our product** *interprets* it and *guides* the future.
@@ -26,7 +26,7 @@ always-available financial advisor. Not a dashboard they have to interpret, but 
 system that interprets *for* them: understands their money, answers questions in
 plain language, plans their goals, and nudges them toward better decisions.
 
-AI Wealth OS aspires to be the **single home base for a person's financial life** —
+Wealth OS aspires to be the **single home base for a person's financial life** —
 the place they open first to ask "can I afford this?", "how am I doing?", and
 "what should I do next?"
 
@@ -121,7 +121,7 @@ Because this is region-agnostic and manual-first, our best-fit user is someone
 
 ## 1.6 Value proposition & differentiation
 
-| Dimension | Typical tracker | **AI Wealth OS** |
+| Dimension | Typical tracker | **Wealth OS** |
 |-----------|----------------|------------------|
 | Core action | Fill a form | **Type/speak one sentence** |
 | Output | A ledger + charts | **An interpretation: "how you're doing"** |
@@ -160,7 +160,7 @@ Since this is a showcase, "success" is not MRR — it's **evidence of senior cra
 
 ### ❓ Open questions (for you)
 1. **Persona region flavor:** Keep Aarav India-flavored (₹, UPI language) in copy, or keep all UI copy currency-neutral so any recruiter relates? *(Recommend: India-flavored demo data, currency-neutral UI logic.)*
-2. **Brand name:** Ship as literally "AI Wealth OS", or is that a working title we may rename later? Affects Chapter 11 (design/logo).
+2. **Brand name:** Ship as literally "Wealth OS", or is that a working title we may rename later? Affects Chapter 11 (design/logo).
 3. **Voice as a v1 nicety:** NL capture is text-first. Do you want a *stretch* voice-to-text on the same feature in v1, or firmly Phase 4? *(Recommend: firmly Phase 4; text nails the demo already.)*
 
 ### ⚠️ Risks

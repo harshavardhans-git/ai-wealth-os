@@ -189,7 +189,7 @@ handful of **pre-seeded `ai_parse_logs`** so Quick Capture demos instantly at $0
 ### ❓ Open questions (for you)
 1. **Primary brand color** — the calm blue-teal I proposed, or do you want a different accent (still avoiding purple)? *(Recommend: blue-teal; easy to retune since it's one token.)*
 2. **Font** — Inter (ubiquitous, safe) vs Geist (more distinctive, modern) for UI? *(Recommend: Geist for a touch more character; both free.)*
-3. **Logo/name treatment** — since "AI Wealth OS" is a working title (Ch 1), do a simple wordmark + monogram now, or leave a placeholder until the name settles? *(Recommend: simple monogram placeholder; don't over-invest in a name that may change.)*
+3. **Logo/name treatment** — since "Wealth OS" is a working title (Ch 1), do a simple wordmark + monogram now, or leave a placeholder until the name settles? *(Recommend: simple monogram placeholder; don't over-invest in a name that may change.)*
 
 ### ⚠️ Risks
 - **R1 — Generic UI undercuts the architecture:** the biggest portfolio risk. Mitigation: invest in tokens, spacing, and the hero screens; polish the dashboard first.

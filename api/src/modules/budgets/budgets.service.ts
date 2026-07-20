@@ -1,4 +1,4 @@
-import type { BudgetWithProgress } from "@ai-wealth-os/types";
+import type { BudgetWithProgress } from "@wealth-os/types";
 import { AppError } from "../../lib/app-error";
 import { bigIntToNumber, toMinor } from "../../lib/money";
 import { currentMonth } from "../../lib/period";

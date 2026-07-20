@@ -8,7 +8,7 @@ services:
     region: singapore # same region as the Neon database
     healthCheckPath: /health
 
-    # Build from the repo root so npm workspaces resolve @ai-wealth-os/types,
+    # Build from the repo root so npm workspaces resolve @wealth-os/types,
     # then apply any pending migrations before the new version serves traffic.
     # --include=dev is required: Render sets NODE_ENV=production, and npm then
     # SKIPS devDependencies — which would leave the Prisma CLI missing at build.
@@ -16,7 +16,7 @@ services:
       npm ci --include=dev &&
       npx prisma migrate deploy --schema api/prisma/schema.prisma &&
       npx prisma generate --schema api/prisma/schema.prisma
-    startCommand: npm run start -w @ai-wealth-os/api
+    startCommand: npm run start -w @wealth-os/api
 
     envVars:
       - key: NODE_ENV

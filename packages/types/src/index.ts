@@ -1,5 +1,5 @@
 /**
- * @ai-wealth-os/types — the shared contract imported by BOTH the Express API and the
+ * @wealth-os/types — the shared contract imported by BOTH the Express API and the
  * Next.js client (Ch 6 §6.4, Ch 8 §8.4). A change here fails compilation on whichever
  * side falls out of sync — a free, compile-time integration test across the service
  * boundary. This is the single source of truth for the shapes that cross the wire.
@@ -73,8 +73,8 @@ export interface Budget {
   startsOn: ISODateString;
 }
 
-// ── The AI natural-language capture draft (A1) ─────────────────────────────────
-// The model only ever PROPOSES this; it is never persisted without confirm +
+// ── The natural-language capture draft (A1) ───────────────────────────────────
+// The parser only ever PROPOSES this; it is never persisted without confirm +
 // server-side re-authorization of categoryId/accountId (Ch 9 §9.2, §9.4).
 export interface ParsedTransactionDraft {
   type: Exclude<TransactionType, "transfer">;

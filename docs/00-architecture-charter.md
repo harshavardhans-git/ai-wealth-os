@@ -4,7 +4,7 @@
 
 ## Context
 
-**AI Wealth OS** is a flagship **portfolio / skills-showcase** project. The goal is
+**Wealth OS** is a flagship **portfolio / skills-showcase** project. The goal is
 to demonstrate senior-level *product + full-stack + AI-first* engineering at
 **near-zero running cost** — not to operate a real fintech handling real money
 (which would add compliance and cost we explicitly avoid).

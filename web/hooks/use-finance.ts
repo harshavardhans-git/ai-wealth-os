@@ -8,7 +8,7 @@ import type {
   DashboardSummary,
   Paginated,
   Transaction,
-} from "@ai-wealth-os/types";
+} from "@wealth-os/types";
 import { apiFetch } from "@/lib/api-client";
 
 /**

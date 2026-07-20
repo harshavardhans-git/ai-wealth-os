@@ -1,4 +1,4 @@
-import type { CategorySpend } from "@ai-wealth-os/types";
+import type { CategorySpend } from "@wealth-os/types";
 import { formatMoney } from "@/lib/money";
 
 /** Fixed slot order — assigned by entity, never cycled past the end. */

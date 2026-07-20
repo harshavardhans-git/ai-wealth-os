@@ -257,7 +257,7 @@ export const demoService = {
     await prisma.budget.createMany({ data: budgetRows });
 
     // Warm the AI cache so Sprint 4's capture demo is instant and costs nothing.
-    await prisma.aiParseLog.createMany({
+    await prisma.captureLog.createMany({
       data: AI_SAMPLES.map((sample) => ({
         userId,
         inputText: sample.input,
@@ -271,7 +271,7 @@ export const demoService = {
           note: sample.input,
           confidence: 0.95,
         },
-        model: "seeded-demo",
+        parser: "seeded-demo",
         confidence: 0.95,
         accepted: true,
       })),

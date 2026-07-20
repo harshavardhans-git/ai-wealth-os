@@ -33,7 +33,7 @@ model User {
   transactions  Transaction[]
   budgets       Budget[]
   importBatches ImportBatch[]
-  aiParseLogs   AiParseLog[]
+  captureLogs   CaptureLog[]
 
   @@map("users")
 }
@@ -150,20 +150,23 @@ model ImportBatch {
   @@map("import_batches")
 }
 
-model AiParseLog {
+/// Every natural-language capture attempt: what was typed, what came back, and
+/// whether the user kept it. This is how the feature's real accuracy is measured
+/// rather than assumed (Ch 9 §9.4).
+model CaptureLog {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @map("user_id") @db.Uuid
   inputText  String   @map("input_text")
-  parsedJson Json     @map("parsed_json") // raw model output (Ch 9 §9.5)
-  model      String
+  parsedJson Json     @map("parsed_json") // the draft that was proposed
+  parser     String // which parser produced it, e.g. "rule-based-v1"
   confidence Decimal? @db.Decimal(4, 3)
   tokens     Int?
-  accepted   Boolean? // did the user save the AI draft? (wedge metric)
+  accepted   Boolean? // did the user save the draft? (the wedge metric)
 
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  @@map("ai_parse_logs")
+  @@map("capture_logs")
 }
