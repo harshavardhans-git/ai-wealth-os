@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MoneyText } from "@/components/patterns/money-text";
 import { Button } from "@/components/ui/button";
@@ -84,11 +85,19 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-        <p className="text-sm text-[var(--text-muted)]">
-          Natural-language capture arrives in a later sprint — for now, the form.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+          <p className="text-sm text-[var(--text-muted)]">
+            Natural-language capture arrives in the next sprint — for now, the form.
+          </p>
+        </div>
+        <Link
+          href="/app/transactions/import"
+          className="shrink-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium hover:bg-[var(--surface-raised)]"
+        >
+          Import CSV
+        </Link>
       </header>
 
       <Card className="p-5">

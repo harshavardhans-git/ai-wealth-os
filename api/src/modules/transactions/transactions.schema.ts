@@ -44,6 +44,29 @@ export const ListTransactionsQuerySchema = z.object({
 
 export const IdParamSchema = z.object({ id: z.string().uuid() });
 
+/**
+ * CSV import (C7). The browser parses the file and maps columns, then posts
+ * normalized rows — so the API never handles multipart uploads or stores files
+ * (Ch 5: "MVP parses CSV without persisting files").
+ */
+export const ImportRowSchema = z.object({
+  occurredAt: z.string(),
+  amount: MoneyInput,
+  type: z.enum(["income", "expense"]),
+  note: z.string().max(280).nullable().optional(),
+  categoryId: z.string().uuid().nullable().optional(),
+});
+
+export const ImportTransactionsSchema = z.object({
+  filename: z.string().min(1).max(200),
+  accountId: z.string().uuid(),
+  rows: z.array(ImportRowSchema).min(1).max(2000),
+});
+
+export const BatchIdParamSchema = z.object({ batchId: z.string().uuid() });
+
+export type ImportTransactionsInput = z.infer<typeof ImportTransactionsSchema>;
+
 export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>;
 export type CreateTransferInput = z.infer<typeof CreateTransferSchema>;
 export type UpdateTransactionInput = z.infer<typeof UpdateTransactionSchema>;

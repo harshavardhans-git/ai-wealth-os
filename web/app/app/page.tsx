@@ -13,7 +13,8 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/ui/card";
-import { useDashboard } from "@/hooks/use-finance";
+import { Button } from "@/components/ui/button";
+import { useDashboard, useSeedDemo } from "@/hooks/use-finance";
 import { useAuth } from "@/providers/auth-provider";
 
 /**
@@ -24,6 +25,7 @@ import { useAuth } from "@/providers/auth-provider";
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data, isLoading, isError } = useDashboard();
+  const seedDemo = useSeedDemo();
 
   if (isLoading) {
     return (
@@ -94,8 +96,24 @@ export default function DashboardPage() {
       </div>
 
       {!hasActivity && (
-        <Card>
-          <EmptyState message="No activity yet — add an account and a transaction to see your dashboard come alive." />
+        <Card className="p-6 text-center">
+          <p className="text-sm text-[var(--text-muted)]">
+            Nothing here yet. Load three months of realistic sample data to see
+            what the app looks like in use — you can start fresh afterwards.
+          </p>
+          <div className="mt-4">
+            <Button
+              onClick={() => seedDemo.mutate()}
+              disabled={seedDemo.isPending}
+            >
+              {seedDemo.isPending ? "Loading demo data…" : "Load demo data"}
+            </Button>
+          </div>
+          {seedDemo.isError && (
+            <p role="alert" className="mt-3 text-sm text-[var(--negative)]">
+              {(seedDemo.error as Error).message}
+            </p>
+          )}
         </Card>
       )}
 

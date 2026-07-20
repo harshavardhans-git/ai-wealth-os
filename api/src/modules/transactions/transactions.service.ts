@@ -16,9 +16,25 @@ import { transactionsRepository } from "./transactions.repository";
 import type {
   CreateTransactionInput,
   CreateTransferInput,
+  ImportTransactionsInput,
   ListTransactionsQuery,
   UpdateTransactionInput,
 } from "./transactions.schema";
+
+export interface ImportResult {
+  batchId: string;
+  imported: number;
+  skipped: number;
+}
+
+/** Identity of a transaction for duplicate detection during import. */
+function dedupeKey(
+  occurredAt: Date,
+  amountMinor: number | bigint,
+  type: string,
+): string {
+  return `${occurredAt.toISOString().slice(0, 10)}|${amountMinor}|${type}`;
+}
 
 function toDto(row: TransactionRow): Transaction {
   return {
@@ -228,6 +244,123 @@ export const transactionsService = {
     await transactionsRepository.updateForUser(id, userId, data);
 
     return this.getById(id, userId);
+  },
+
+  /**
+   * Bulk import (C7). Every row lands under one `import_batch`, which is what
+   * makes "undo this import" a single operation instead of hunting rows (Ch 5).
+   *
+   * Duplicates are skipped rather than rejected: re-importing an overlapping
+   * statement is the normal case, and failing the whole file over it would be
+   * hostile. We report the count so the user knows what happened.
+   */
+  async importTransactions(
+    userId: string,
+    input: ImportTransactionsInput,
+  ): Promise<ImportResult> {
+    const account = await requireOwnedAccount(input.accountId, userId);
+    const baseCurrency = await getBaseCurrency(userId);
+
+    const parsed = input.rows.map((row) => {
+      const amountMinor = toMinor(row.amount);
+      if (amountMinor <= 0) {
+        throw AppError.validation("Every row must have a positive amount");
+      }
+      return {
+        occurredAt: parseDate(row.occurredAt),
+        amountMinor,
+        type: row.type,
+        note: row.note ?? null,
+        categoryId: row.categoryId ?? null,
+      };
+    });
+
+    // Only compare against existing rows in the same account and date window.
+    const dates = parsed.map((row) => row.occurredAt.getTime());
+    const existing = await prisma.transaction.findMany({
+      where: {
+        userId,
+        accountId: account.id,
+        deletedAt: null,
+        occurredAt: {
+          gte: new Date(Math.min(...dates)),
+          lte: new Date(Math.max(...dates) + 86_400_000),
+        },
+      },
+      select: { occurredAt: true, amountMinor: true, type: true },
+    });
+
+    const seen = new Set(
+      // BigInt and number stringify identically here (32050n → "32050"), so keys
+      // from existing rows and incoming rows compare correctly.
+      existing.map((row) => dedupeKey(row.occurredAt, row.amountMinor, row.type)),
+    );
+
+    const toInsert = parsed.filter((row) => {
+      const key = dedupeKey(row.occurredAt, row.amountMinor, row.type);
+      if (seen.has(key)) return false;
+      seen.add(key); // also de-dupes rows repeated within the file itself
+      return true;
+    });
+
+    const batch = await prisma.importBatch.create({
+      data: {
+        userId,
+        filename: input.filename,
+        rowCount: input.rows.length,
+        status: "committed",
+      },
+    });
+
+    if (toInsert.length > 0) {
+      await prisma.transaction.createMany({
+        data: toInsert.map((row) => ({
+          userId,
+          accountId: account.id,
+          categoryId: row.categoryId,
+          type: row.type,
+          amountMinor: BigInt(row.amountMinor),
+          currency: account.currency,
+          amountBaseMinor: BigInt(
+            convertMinor(row.amountMinor, account.currency, baseCurrency),
+          ),
+          occurredAt: row.occurredAt,
+          note: row.note,
+          source: "import",
+          importBatchId: batch.id,
+        })),
+      });
+    }
+
+    return {
+      batchId: batch.id,
+      imported: toInsert.length,
+      skipped: input.rows.length - toInsert.length,
+    };
+  },
+
+  /** Undo an entire import in one operation — the payoff of batching (Ch 5). */
+  async revertImport(userId: string, batchId: string): Promise<number> {
+    const batch = await prisma.importBatch.findFirst({
+      where: { id: batchId, userId },
+    });
+    if (!batch) throw AppError.notFound("Import not found");
+    if (batch.status === "reverted") {
+      throw AppError.conflict("This import has already been reverted");
+    }
+
+    const [{ count }] = await prisma.$transaction([
+      prisma.transaction.updateMany({
+        where: { importBatchId: batchId, userId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      }),
+      prisma.importBatch.update({
+        where: { id: batchId },
+        data: { status: "reverted" },
+      }),
+    ]);
+
+    return count;
   },
 
   async remove(id: string, userId: string): Promise<void> {

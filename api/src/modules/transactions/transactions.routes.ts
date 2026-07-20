@@ -3,9 +3,11 @@ import { asyncHandler } from "../../lib/async-handler";
 import { requireAuth } from "../../middleware/require-auth";
 import { validate } from "../../middleware/validate";
 import {
+  BatchIdParamSchema,
   CreateTransactionSchema,
   CreateTransferSchema,
   IdParamSchema,
+  ImportTransactionsSchema,
   ListTransactionsQuerySchema,
   UpdateTransactionSchema,
 } from "./transactions.schema";
@@ -42,6 +44,31 @@ transactionsRouter.post(
   asyncHandler(async (req, res) => {
     const legs = await transactionsService.createTransfer(req.userId!, req.body);
     res.status(201).json({ data: legs });
+  }),
+);
+
+// Registered BEFORE the "/:id" routes so "import" is never captured as an id.
+transactionsRouter.post(
+  "/import",
+  validate({ body: ImportTransactionsSchema }),
+  asyncHandler(async (req, res) => {
+    const result = await transactionsService.importTransactions(
+      req.userId!,
+      req.body,
+    );
+    res.status(201).json({ data: result });
+  }),
+);
+
+transactionsRouter.post(
+  "/import/:batchId/revert",
+  validate({ params: BatchIdParamSchema }),
+  asyncHandler(async (req, res) => {
+    const reverted = await transactionsService.revertImport(
+      req.userId!,
+      req.params.batchId!,
+    );
+    res.json({ data: { reverted } });
   }),
 );
 

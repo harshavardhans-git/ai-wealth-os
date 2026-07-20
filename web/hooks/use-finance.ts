@@ -38,6 +38,24 @@ function invalidateMoney(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
 }
 
+/**
+ * Loads the engineered demo dataset into the signed-in account (Ch 11 §11.5).
+ * Invalidates everything, because it creates accounts, transactions, and budgets
+ * all at once.
+ */
+export function useSeedDemo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ accounts: number; transactions: number; budgets: number }>(
+        "/demo/seed",
+        { method: "POST" },
+      ),
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+}
+
 export function useDashboard(enabled = true) {
   return useQuery({
     queryKey: queryKeys.dashboard,

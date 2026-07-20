@@ -10,6 +10,7 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { budgetsRouter } from "./modules/budgets/budgets.routes";
 import { categoriesRouter } from "./modules/categories/categories.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
+import { demoRouter } from "./modules/demo/demo.routes";
 import { healthRouter } from "./modules/health/health.routes";
 import { transactionsRouter } from "./modules/transactions/transactions.routes";
 
@@ -45,6 +46,7 @@ export function createApp(): Express {
   apiV1.use("/budgets", budgetsRouter);
   apiV1.use("/categories", categoriesRouter);
   apiV1.use("/dashboard", dashboardRouter);
+  apiV1.use("/demo", demoRouter);
   apiV1.use("/transactions", transactionsRouter);
   app.use("/api/v1", apiV1);
 
