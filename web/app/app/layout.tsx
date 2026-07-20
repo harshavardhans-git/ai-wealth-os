@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { QuickCapture } from "@/components/features/quick-capture";
 import { useAuth } from "@/providers/auth-provider";
 
 const NAV = [
@@ -89,6 +90,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Global, not per-page: the flagship is one keystroke from anywhere. */}
+      <QuickCapture />
     </div>
   );
 }

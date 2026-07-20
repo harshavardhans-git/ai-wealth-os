@@ -9,7 +9,7 @@ export const CreateTransactionSchema = z.object({
   categoryId: z.string().uuid().nullable().optional(),
   occurredAt: z.string().optional(), // ISO date/datetime; defaults to now
   note: z.string().max(280).nullable().optional(),
-  source: z.enum(["manual", "ai", "import"]).optional(),
+  source: z.enum(["manual", "capture", "import"]).optional(),
 });
 
 export const CreateTransferSchema = z

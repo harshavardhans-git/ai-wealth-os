@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { accountsRouter } from "./modules/accounts/accounts.routes";
 import { authRouter } from "./modules/auth/auth.routes";
 import { budgetsRouter } from "./modules/budgets/budgets.routes";
+import { captureRouter } from "./modules/capture/capture.routes";
 import { categoriesRouter } from "./modules/categories/categories.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { demoRouter } from "./modules/demo/demo.routes";
@@ -44,6 +45,7 @@ export function createApp(): Express {
   apiV1.use("/auth", authLimiter, authRouter);
   apiV1.use("/accounts", accountsRouter);
   apiV1.use("/budgets", budgetsRouter);
+  apiV1.use("/capture", captureRouter);
   apiV1.use("/categories", categoriesRouter);
   apiV1.use("/dashboard", dashboardRouter);
   apiV1.use("/demo", demoRouter);

@@ -218,9 +218,12 @@ export default function TransactionsPage() {
                   <div className="min-w-0">
                     <p className="truncate font-medium">
                       {transaction.note ?? category?.name ?? "—"}
-                      {transaction.source === "ai" && (
-                        <span className="ml-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-1.5 py-0.5 text-[10px] uppercase text-[var(--text-muted)]">
-                          AI
+                      {transaction.source === "capture" && (
+                        <span
+                          title="Added with quick capture"
+                          className="ml-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-1.5 py-0.5 text-[10px] uppercase text-[var(--text-muted)]"
+                        >
+                          ⌘K
                         </span>
                       )}
                     </p>

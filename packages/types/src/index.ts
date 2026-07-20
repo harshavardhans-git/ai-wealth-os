@@ -20,7 +20,8 @@ export type MoneyMinor = number;
 export type AccountType = "cash" | "bank" | "card" | "wallet";
 export type CategoryKind = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
-export type TransactionSource = "manual" | "ai" | "import";
+/** How a transaction got here. "capture" = the natural-language quick-capture. */
+export type TransactionSource = "manual" | "capture" | "import";
 export type TransferDirection = "in" | "out";
 export type BudgetPeriod = "monthly";
 
@@ -84,6 +85,13 @@ export interface ParsedTransactionDraft {
   occurredAt: ISODateString;
   note: string | null;
   confidence: number; // 0–1; drives the draft-vs-manual-form choice (Ch 9)
+  /** Which parts of the sentence were understood — shown to the user. */
+  matched: {
+    amount: boolean;
+    date: boolean;
+    category: boolean;
+    account: boolean;
+  };
 }
 
 /** Budget progress is COMPUTED on read, never stored (Ch 5 §5.4). */
