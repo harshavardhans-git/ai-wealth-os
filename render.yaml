@@ -32,5 +32,5 @@ services:
         sync: false
       - key: WEB_ORIGIN
         sync: false # e.g. https://ai-wealth-os.vercel.app
-      - key: ANTHROPIC_API_KEY
-        sync: false # added in Sprint 4
+      # ANTHROPIC_API_KEY is added in Sprint 4 (AI capture). Left out on purpose:
+      # the env schema rejects an empty string, so a blank value would crash boot.
