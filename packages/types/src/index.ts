@@ -8,7 +8,7 @@
 // ── Primitive aliases (documentation, not new runtime types) ──────────────────
 export type UUID = string;
 export type ISODateString = string; // e.g. "2026-07-20T00:00:00.000Z"
-export type CurrencyCode = string;  // ISO 4217, e.g. "INR", "USD"
+export type CurrencyCode = string; // ISO 4217, e.g. "INR", "USD"
 
 /**
  * Money is ALWAYS integer minor units (paise/cents), never a float (Ch 5 D1).
@@ -21,6 +21,7 @@ export type AccountType = "cash" | "bank" | "card" | "wallet";
 export type CategoryKind = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
 export type TransactionSource = "manual" | "ai" | "import";
+export type TransferDirection = "in" | "out";
 export type BudgetPeriod = "monthly";
 
 // ── Entity DTOs (camelCase API shape; mirror the Ch 5 tables) ─────────────────
@@ -31,6 +32,11 @@ export interface Account {
   currency: CurrencyCode;
   openingBalanceMinor: MoneyMinor;
   isArchived: boolean;
+}
+
+/** Balances are DERIVED, never stored (Ch 5 §5.4). */
+export interface AccountWithBalance extends Account {
+  balanceMinor: MoneyMinor;
 }
 
 export interface Category {
@@ -47,13 +53,14 @@ export interface Transaction {
   accountId: UUID;
   categoryId: UUID | null;
   type: TransactionType;
-  amountMinor: MoneyMinor;   // always positive; direction comes from `type` (Ch 5)
+  amountMinor: MoneyMinor; // always positive; direction comes from `type`
   currency: CurrencyCode;
   amountBaseMinor: MoneyMinor; // value in the user's base currency (Ch 5 §5.5)
   occurredAt: ISODateString;
   note: string | null;
   source: TransactionSource;
   transferGroupId: UUID | null;
+  transferDirection: TransferDirection | null;
 }
 
 export interface Budget {
@@ -65,18 +72,26 @@ export interface Budget {
   startsOn: ISODateString;
 }
 
-// ── The AI natural-language capture draft (A1) — the model's proposed output ───
+// ── The AI natural-language capture draft (A1) ─────────────────────────────────
 // The model only ever PROPOSES this; it is never persisted without confirm +
 // server-side re-authorization of categoryId/accountId (Ch 9 §9.2, §9.4).
 export interface ParsedTransactionDraft {
-  type: Exclude<TransactionType, "transfer">; // capture handles income/expense in v1
+  type: Exclude<TransactionType, "transfer">;
   amountMinor: MoneyMinor;
   currency: CurrencyCode;
-  categoryId: UUID | null; // must belong to the user, else coerced to null
-  accountId: UUID | null;  // must belong to the user, else coerced to null
+  categoryId: UUID | null;
+  accountId: UUID | null;
   occurredAt: ISODateString;
   note: string | null;
-  confidence: number; // 0–1; drives the UI draft-vs-manual-form choice (Ch 9)
+  confidence: number; // 0–1; drives the draft-vs-manual-form choice (Ch 9)
+}
+
+// ── List responses ────────────────────────────────────────────────────────────
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 // ── API envelope — every response is exactly one of these (Ch 7 §7.5) ─────────
@@ -85,11 +100,13 @@ export type ApiErrorCode =
   | "UNAUTHORIZED"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "RATE_LIMITED"
   | "INTERNAL";
 
 export interface ApiSuccess<T> {
   data: T;
 }
+
 export interface ApiError {
   error: {
     code: ApiErrorCode;
@@ -97,4 +114,5 @@ export interface ApiError {
     details?: unknown;
   };
 }
+
 export type ApiResponse<T> = ApiSuccess<T> | ApiError;

@@ -1,8 +1,9 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
+    // We run TypeScript directly via tsx (no build step), so tsc is used purely
+    // as a type checker — hence noEmit and no rootDir/outDir.
+    "noEmit": true,
     "types": ["node"]
   },
   "include": ["src", "prisma"]

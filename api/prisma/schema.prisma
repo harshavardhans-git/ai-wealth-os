@@ -92,6 +92,10 @@ model Transaction {
   note            String?
   source          String    @default("manual") // 'manual' | 'ai' | 'import'
   transferGroupId String?   @map("transfer_group_id") @db.Uuid // links a transfer pair
+  // 'out' on the leg leaving the source account, 'in' on the leg entering the
+  // destination. NULL for income/expense. Amounts stay positive (Ch 5), so this
+  // is what makes a transfer's direction derivable when computing balances.
+  transferDirection String? @map("transfer_direction")
   importBatchId   String?   @map("import_batch_id") @db.Uuid
   deletedAt       DateTime? @map("deleted_at") // soft delete (Ch 5 D4)
 

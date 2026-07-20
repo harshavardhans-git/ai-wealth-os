@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { MoneyText } from "@/components/patterns/money-text";
 
@@ -41,6 +42,21 @@ export default function Home() {
           Type one sentence — <em>&ldquo;coffee 250 yesterday&rdquo;</em> — and get a
           categorized, budget-aware transaction.
         </p>
+
+        <div className="flex gap-3 pt-2">
+          <Link
+            href="/signup"
+            className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-2 text-sm font-medium text-[var(--primary-contrast)] hover:opacity-90"
+          >
+            Get started
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium hover:bg-[var(--surface-raised)]"
+          >
+            Sign in
+          </Link>
+        </div>
       </header>
 
       <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
