@@ -1,10 +1,15 @@
 import { afterAll, describe, expect, it } from "vitest";
+import request from "supertest";
 import {
   api,
+  app,
   cleanupUsers,
   createUser,
   expenseCategory,
   makeAccount,
+  postRefresh,
+  refreshCookieFrom,
+  signupRaw,
 } from "./test/helpers";
 
 /**
@@ -170,6 +175,116 @@ describe("INVARIANT 7 — auth lifecycle", () => {
         email: user.email, password: "supersecret123", name: "Copy",
       })
       .expect(409);
+  });
+
+  // Ch 10 §10.2 promises rotation makes a stolen refresh token "a short race".
+  // That claim was false until refresh tokens got their own rows: tokenVersion
+  // could only revoke everything at once, so a rotated token stayed valid for
+  // its full 7 days beside its replacement. These four tests are the claim.
+  it("rotates the refresh token, and the old one stops working", async () => {
+    const { refreshCookie } = await signupRaw("rotate");
+
+    const first = await postRefresh(refreshCookie).expect(200);
+    const rotated = refreshCookieFrom(first);
+    expect(rotated).not.toBe(refreshCookie);
+
+    // The replacement works...
+    await postRefresh(rotated).expect(200);
+  });
+
+  it("revokes the whole family when a rotated token is replayed", async () => {
+    const { refreshCookie } = await signupRaw("reuse");
+
+    const first = await postRefresh(refreshCookie).expect(200);
+    const rotated = refreshCookieFrom(first);
+
+    // Replaying the ALREADY-ROTATED token: either the user replaying an old
+    // cookie or an attacker with a stolen one. We cannot tell, so we assume theft.
+    await postRefresh(refreshCookie).expect(401);
+
+    // ...and the consequence: the legitimate successor dies too. A thief who
+    // races ahead cannot keep the session alive at the real user's expense.
+    await postRefresh(rotated).expect(401);
+  });
+
+  it("keeps other sessions alive when one rotates", async () => {
+    const { email, refreshCookie: deviceA } = await signupRaw("multi");
+
+    const loginB = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password: "supersecret123" })
+      .expect(200);
+    const deviceB = refreshCookieFrom(loginB);
+
+    await postRefresh(deviceA).expect(200);
+
+    // Rotation is per-token, not per-user: signing in on a second device must
+    // not silently sign you out of the first.
+    await postRefresh(deviceB).expect(200);
+  });
+
+  it("rejects a refresh carrying a foreign Origin", async () => {
+    const { refreshCookie } = await signupRaw("csrf");
+
+    // The refresh cookie is SameSite=none in production, so the browser WILL
+    // attach it cross-site. Origin is the control that stops a foreign page
+    // spending it — and scripts cannot forge the header.
+    await postRefresh(refreshCookie)
+      .set("Origin", "https://evil.example.com")
+      .expect(403);
+
+    await postRefresh(refreshCookie).expect(200);
+  });
+});
+
+// ── PROVENANCE ───────────────────────────────────────────────────────────────
+describe("provenance is server-determined", () => {
+  it("ignores a client-supplied source and records 'manual'", async () => {
+    const user = await createUser("prov");
+    const account = await makeAccount(user);
+
+    const created = await api
+      .post("/transactions", user, {
+        accountId: account.id,
+        type: "expense",
+        amount: "100.00",
+        source: "capture", // a lie the API must not accept
+      })
+      .expect(201);
+
+    expect(created.body.data.source).toBe("manual");
+  });
+
+  it("stamps 'capture' only via the accept endpoint, and only on your own row", async () => {
+    const alice = await createUser("prov_a");
+    const bob = await createUser("prov_b");
+    const account = await makeAccount(alice);
+
+    const created = await api
+      .post("/transactions", alice, {
+        accountId: account.id, type: "expense", amount: "250.00",
+      })
+      .expect(201);
+
+    // Bob naming Alice's transaction id must not touch it — the update is
+    // scoped by userId, so a valid-looking id from the wrong user does nothing.
+    await api
+      .post("/capture/accepted", bob, {
+        text: "coffee 250", transactionId: created.body.data.id,
+      })
+      .expect(204);
+
+    const afterBob = await api.get(`/transactions/${created.body.data.id}`, alice);
+    expect(afterBob.body.data.source).toBe("manual");
+
+    await api
+      .post("/capture/accepted", alice, {
+        text: "coffee 250", transactionId: created.body.data.id,
+      })
+      .expect(204);
+
+    const afterAlice = await api.get(`/transactions/${created.body.data.id}`, alice);
+    expect(afterAlice.body.data.source).toBe("capture");
   });
 });
 

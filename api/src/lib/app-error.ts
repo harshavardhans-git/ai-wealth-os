@@ -6,6 +6,7 @@
 export type AppErrorCode =
   | "VALIDATION"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
   | "RATE_LIMITED"
@@ -28,6 +29,16 @@ export class AppError extends Error {
 
   static unauthorized(message = "Unauthorized") {
     return new AppError("UNAUTHORIZED", message, 401);
+  }
+
+  /**
+   * For requests that are rejected on their SHAPE, not on what they own — a
+   * cross-origin call, say. Ownership failures deliberately do NOT use this:
+   * they return 404, so an attacker cannot tell "exists but yours" from
+   * "does not exist" (Ch 10 §10.5).
+   */
+  static forbidden(message = "Forbidden") {
+    return new AppError("FORBIDDEN", message, 403);
   }
 
   /** Used for cross-user access too — we return 404, never 403 (Ch 10 §10.5). */

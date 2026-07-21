@@ -232,9 +232,9 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: string) =>
       apiFetch<void>(`/transactions/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-    },
+    // Deleting money changes the dashboard and budget progress exactly as much
+    // as creating it does. Listing only transactions+accounts here left budget
+    // meters and net worth stale for a full staleTime window.
+    onSuccess: () => invalidateMoney(queryClient),
   });
 }

@@ -9,7 +9,10 @@ export const CreateTransactionSchema = z.object({
   categoryId: z.string().uuid().nullable().optional(),
   occurredAt: z.string().optional(), // ISO date/datetime; defaults to now
   note: z.string().max(280).nullable().optional(),
-  source: z.enum(["manual", "capture", "import"]).optional(),
+  // No `source` field by design. Provenance is server-determined: this route
+  // always writes "manual", /transactions/import writes "import", and
+  // /capture/accepted stamps "capture". A client that could name its own source
+  // could lie about how a row was created.
 });
 
 export const CreateTransferSchema = z

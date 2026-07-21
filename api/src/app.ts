@@ -25,6 +25,13 @@ import { transactionsRouter } from "./modules/transactions/transactions.routes";
 export function createApp(): Express {
   const app = express();
 
+  // Render terminates TLS at its edge and forwards, so without this every
+  // request appears to come from the proxy's IP — collapsing the per-IP rate
+  // limiter below into ONE bucket shared by all users. `1` trusts exactly the
+  // nearest hop; trusting blindly would let a client spoof X-Forwarded-For and
+  // mint itself unlimited buckets.
+  app.set("trust proxy", 1);
+
   app.use(helmet()); // security headers (Ch 12)
   app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
   app.use(express.json({ limit: "1mb" })); // cap body size (Ch 12)

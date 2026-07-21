@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, LoadingState } from "@/components/ui/card";
+import { Card, CardHeader, ErrorState, LoadingState } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
 import {
   useCategories,
@@ -199,7 +199,15 @@ export default function SettingsPage() {
         </div>
 
         {categories.isLoading && <LoadingState />}
-        {custom.length === 0 && !categories.isLoading && (
+
+        {/* Distinct from the empty state below. Rendering "no categories yet"
+            when the request actually FAILED tells the user their data is gone
+            when it is merely unreachable — the worst lie a finance app can tell. */}
+        {categories.isError && (
+          <ErrorState message="Could not load your categories. Check your connection and try again." />
+        )}
+
+        {!categories.isLoading && !categories.isError && custom.length === 0 && (
           <p className="px-5 py-8 text-center text-sm text-[var(--text-muted)]">
             No custom categories yet. The {(categories.data ?? []).length} built-in
             ones are always available.

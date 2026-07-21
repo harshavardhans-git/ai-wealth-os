@@ -34,8 +34,36 @@ model User {
   budgets       Budget[]
   importBatches ImportBatch[]
   captureLogs   CaptureLog[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+/// One row per issued refresh token — what makes rotation real (Ch 10 §10.2).
+///
+/// `tokenVersion` alone could only revoke EVERYTHING at once, so a "rotated" token
+/// stayed valid for its full 7 days beside its replacement. Tracking each token by
+/// its `jti` lets us retire exactly one, keep other devices signed in, and detect
+/// reuse: a token presented after it was rotated can only be a copy, so the whole
+/// family is revoked.
+///
+/// The token itself is never stored — only its id. A leaked table row cannot be
+/// replayed as a credential.
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  /// The token this one was rotated into — the audit trail for a reuse event.
+  replacedBy String?   @map("replaced_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 model Account {

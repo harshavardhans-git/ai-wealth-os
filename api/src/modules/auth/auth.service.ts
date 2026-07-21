@@ -2,11 +2,12 @@ import argon2 from "argon2";
 import type { User } from "@prisma/client";
 import { AppError } from "../../lib/app-error";
 import {
+  REFRESH_TTL_MS,
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
 } from "../../lib/jwt";
-import { convertMinor } from "../../lib/fx";
+import { ratePair } from "../../lib/fx";
 import { prisma } from "../../lib/prisma";
 import { authRepository } from "./auth.repository";
 import type { LoginInput, SignupInput, UpdateMeInput } from "./auth.schema";
@@ -24,6 +25,21 @@ export interface AuthResult {
   user: PublicUser;
 }
 
+/**
+ * argon2id work factor, pinned explicitly (Ch 10 §10.2, Ch 12 §12.2).
+ *
+ * These are the OWASP minimums, not library defaults. A password hash's whole
+ * value is its cost, and leaving that cost to whatever a minor dependency bump
+ * happens to ship means the security property is unowned. Written down, it can be
+ * reviewed and raised deliberately as hardware gets faster.
+ */
+const ARGON2_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 19_456, // 19 MiB
+  timeCost: 2,
+  parallelism: 1,
+} as const;
+
 /** Never leak passwordHash / tokenVersion to the client. */
 function toPublicUser(user: User): PublicUser {
   return {
@@ -34,10 +50,18 @@ function toPublicUser(user: User): PublicUser {
   };
 }
 
-function issueTokens(user: User): AuthResult {
+/**
+ * Mints a fresh token pair and records the refresh token so it can later be
+ * retired on its own. Every issuing path goes through here, so no token can
+ * exist without a row to revoke.
+ */
+async function issueTokens(user: User): Promise<AuthResult> {
+  const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
+  const record = await authRepository.createRefreshToken(user.id, expiresAt);
+
   return {
     accessToken: signAccessToken(user.id),
-    refreshToken: signRefreshToken(user.id, user.tokenVersion),
+    refreshToken: signRefreshToken(user.id, user.tokenVersion, record.id),
     user: toPublicUser(user),
   };
 }
@@ -49,10 +73,7 @@ export const authService = {
       throw AppError.conflict("An account with that email already exists");
     }
 
-    // argon2id: memory-hard, the current recommended password hash (Ch 10 §10.2).
-    const passwordHash = await argon2.hash(input.password, {
-      type: argon2.argon2id,
-    });
+    const passwordHash = await argon2.hash(input.password, ARGON2_OPTIONS);
 
     const user = await authRepository.create({
       email: input.email,
@@ -91,16 +112,51 @@ export const authService = {
     const user = await authRepository.findById(payload.sub);
     if (!user) throw AppError.unauthorized("Invalid refresh token");
 
-    // The revocation check: a logout/password-change bumped tokenVersion, so every
+    // Blunt lever: a logout or password change bumped tokenVersion, so every
     // token minted before that no longer matches.
     if (user.tokenVersion !== payload.tv) {
       throw AppError.unauthorized("Refresh token has been revoked");
     }
 
-    return issueTokens(user);
+    const record = await authRepository.findRefreshToken(payload.jti);
+    if (!record || record.userId !== user.id) {
+      throw AppError.unauthorized("Refresh token has been revoked");
+    }
+
+    // REUSE DETECTION. This token was already rotated, so the caller is holding a
+    // copy — either the legitimate user replaying an old cookie, or an attacker
+    // with a stolen one. We cannot tell which, so we assume the worst and revoke
+    // the whole family. The real user signs in again; the thief gets nothing.
+    if (record.revokedAt) {
+      await authRepository.revokeAllRefreshTokens(user.id);
+      await authRepository.incrementTokenVersion(user.id);
+      throw AppError.unauthorized("Refresh token has been revoked");
+    }
+
+    if (record.expiresAt.getTime() <= Date.now()) {
+      throw AppError.unauthorized("Invalid or expired refresh token");
+    }
+
+    // Precise lever: retire exactly this token and hand back its successor. Other
+    // devices keep their own tokens and stay signed in.
+    const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
+    const next = await authRepository.rotateRefreshToken(
+      record.id,
+      user.id,
+      expiresAt,
+    );
+
+    return {
+      accessToken: signAccessToken(user.id),
+      refreshToken: signRefreshToken(user.id, user.tokenVersion, next.id),
+      user: toPublicUser(user),
+    };
   },
 
   async logout(userId: string): Promise<void> {
+    // Both levers: the counter kills anything already minted, and the rows make
+    // that visible in the table rather than only implied by a version mismatch.
+    await authRepository.revokeAllRefreshTokens(userId);
     await authRepository.incrementTokenVersion(userId);
   },
 
@@ -148,11 +204,20 @@ export const authService = {
       });
 
       for (const { currency } of currencies) {
-        // The scale factor for one unit, applied to every row in that currency.
-        const ratio = convertMinor(1_000_000, currency, nextCurrency) / 1_000_000;
+        const rates = ratePair(currency, nextCurrency);
+        // Unknown currency: convertMinor would pass it through 1:1, and
+        // amount_base_minor already equals amount_minor. Nothing to do.
+        if (!rates) continue;
+
+        // Both integers cross the boundary and Postgres divides them in
+        // `numeric` — exact rational arithmetic, rounded exactly once. Passing a
+        // pre-divided JS ratio here would round twice and drift the ledger.
         await tx.$executeRaw`
           UPDATE transactions
-          SET amount_base_minor = ROUND(amount_minor * ${ratio}::numeric)
+          SET amount_base_minor = ROUND(
+            amount_minor::numeric * ${rates.fromRate}::numeric
+            / ${rates.toRate}::numeric
+          )
           WHERE user_id = ${userId}::uuid AND currency = ${currency}
         `;
       }
@@ -166,10 +231,20 @@ export const authService = {
       });
 
       for (const { currency } of budgets) {
-        const ratio = convertMinor(1_000_000, currency, nextCurrency) / 1_000_000;
+        const rates = ratePair(currency, nextCurrency);
+        if (!rates) continue;
+
+        // KNOWN LIMITATION: unlike transactions, a budget has no original-amount
+        // column to re-derive from, so this rewrites the limit in place. Flipping
+        // INR→USD→INR will not land back on the exact original rupee figure.
+        // Fixing it properly means storing the limit's own currency snapshot —
+        // tracked as a schema change, not patched with more rounding here.
         await tx.$executeRaw`
           UPDATE budgets
-          SET amount_minor = ROUND(amount_minor * ${ratio}::numeric),
+          SET amount_minor = ROUND(
+                amount_minor::numeric * ${rates.fromRate}::numeric
+                / ${rates.toRate}::numeric
+              ),
               currency = ${nextCurrency}
           WHERE user_id = ${userId}::uuid AND currency = ${currency}
         `;

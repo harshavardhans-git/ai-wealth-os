@@ -144,6 +144,7 @@ export interface Paginated<T> {
 export type ApiErrorCode =
   | "VALIDATION"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
   | "RATE_LIMITED"

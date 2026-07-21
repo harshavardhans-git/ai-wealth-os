@@ -146,7 +146,7 @@ export const transactionsService = {
       ),
       occurredAt: parseDate(input.occurredAt),
       note: input.note ?? null,
-      source: input.source ?? "manual",
+      source: "manual",
     });
 
     return toDto(row);
@@ -303,34 +303,42 @@ export const transactionsService = {
       return true;
     });
 
-    const batch = await prisma.importBatch.create({
-      data: {
-        userId,
-        filename: input.filename,
-        rowCount: input.rows.length,
-        status: "committed",
-      },
-    });
-
-    if (toInsert.length > 0) {
-      await prisma.transaction.createMany({
-        data: toInsert.map((row) => ({
+    // Batch row and its transactions are written together or not at all. Two
+    // separate statements could leave a batch marked "committed" with zero rows
+    // behind it — a receipt for an import that never happened, and one that
+    // revertImport would then find nothing to undo.
+    const batch = await prisma.$transaction(async (tx) => {
+      const created = await tx.importBatch.create({
+        data: {
           userId,
-          accountId: account.id,
-          categoryId: row.categoryId,
-          type: row.type,
-          amountMinor: BigInt(row.amountMinor),
-          currency: account.currency,
-          amountBaseMinor: BigInt(
-            convertMinor(row.amountMinor, account.currency, baseCurrency),
-          ),
-          occurredAt: row.occurredAt,
-          note: row.note,
-          source: "import",
-          importBatchId: batch.id,
-        })),
+          filename: input.filename,
+          rowCount: input.rows.length,
+          status: "committed",
+        },
       });
-    }
+
+      if (toInsert.length > 0) {
+        await tx.transaction.createMany({
+          data: toInsert.map((row) => ({
+            userId,
+            accountId: account.id,
+            categoryId: row.categoryId,
+            type: row.type,
+            amountMinor: BigInt(row.amountMinor),
+            currency: account.currency,
+            amountBaseMinor: BigInt(
+              convertMinor(row.amountMinor, account.currency, baseCurrency),
+            ),
+            occurredAt: row.occurredAt,
+            note: row.note,
+            source: "import",
+            importBatchId: created.id,
+          })),
+        });
+      }
+
+      return created;
+    });
 
     return {
       batchId: batch.id,

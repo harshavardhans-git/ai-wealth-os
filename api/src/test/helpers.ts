@@ -58,6 +58,7 @@ export async function cleanupUsers(): Promise<void> {
   if (createdUserIds.length === 0) return;
   const where = { userId: { in: createdUserIds } };
 
+  await prisma.refreshToken.deleteMany({ where });
   await prisma.captureLog.deleteMany({ where });
   await prisma.transaction.deleteMany({ where });
   await prisma.budget.deleteMany({ where });
@@ -67,6 +68,39 @@ export async function cleanupUsers(): Promise<void> {
   await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
 
   createdUserIds.length = 0;
+}
+
+/**
+ * Signs up a user and hands back the raw response, so tests can inspect the
+ * `Set-Cookie` header that `createUser` discards. Needed to exercise refresh
+ * rotation, which is entirely a cookie-level behaviour.
+ */
+export async function signupRaw(label = "raw") {
+  counter += 1;
+  const email = `test_${label}_${Date.now()}_${counter}@example.test`;
+
+  const response = await request(app)
+    .post("/api/v1/auth/signup")
+    .send({ email, password: "supersecret123", name: `Test ${label}` })
+    .expect(201);
+
+  createdUserIds.push(response.body.data.user.id);
+  return { email, response, refreshCookie: refreshCookieFrom(response) };
+}
+
+/** Pulls the refresh cookie out of a Set-Cookie header, ready to send back. */
+export function refreshCookieFrom(response: request.Response): string {
+  const header = response.headers["set-cookie"] as unknown as
+    | string[]
+    | undefined;
+  const cookie = (header ?? []).find((c) => c.startsWith("refresh_token="));
+  if (!cookie) throw new Error("No refresh_token cookie on response");
+  return cookie.split(";")[0]!;
+}
+
+/** POSTs /auth/refresh with an explicit cookie — the rotation entry point. */
+export function postRefresh(cookie: string) {
+  return request(app).post("/api/v1/auth/refresh").set("Cookie", cookie);
 }
 
 /** Convenience wrappers so tests read as intent, not plumbing. */

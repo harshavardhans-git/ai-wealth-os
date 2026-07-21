@@ -7,7 +7,13 @@ import { validate } from "../../middleware/validate";
 import { captureService } from "./capture.service";
 
 const ParseSchema = z.object({ text: z.string().min(1).max(200) });
-const AcceptSchema = z.object({ text: z.string().min(1).max(200) });
+const AcceptSchema = z.object({
+  text: z.string().min(1).max(200),
+  // The row the confirmed draft became. Provenance is stamped here, by the
+  // endpoint that knows a capture actually happened — not claimed by the client
+  // in the create payload, where anything could assert it.
+  transactionId: z.string().uuid(),
+});
 
 export const captureRouter = Router();
 
@@ -32,7 +38,11 @@ captureRouter.post(
   "/accepted",
   validate({ body: AcceptSchema }),
   asyncHandler(async (req, res) => {
-    await captureService.markAccepted(req.userId!, req.body.text);
+    await captureService.markAccepted(
+      req.userId!,
+      req.body.text,
+      req.body.transactionId,
+    );
     res.status(204).send();
   }),
 );

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ParsedTransactionDraft } from "@wealth-os/types";
+import type { ParsedTransactionDraft, Transaction } from "@wealth-os/types";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { MoneyText } from "@/components/patterns/money-text";
@@ -43,11 +43,15 @@ export function QuickCapture() {
         event.preventDefault();
         setIsOpen(true);
       }
-      if (event.key === "Escape") close();
+      // Guarded on isOpen: an unconditional Esc handler also ran while the
+      // dialog was CLOSED, and close() calls returnFocusRef.current?.focus() —
+      // so pressing Esc anywhere in the app yanked focus to whatever element
+      // last opened the overlay.
+      if (event.key === "Escape" && isOpen) close();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,9 +67,14 @@ export function QuickCapture() {
   function trapFocus(event: React.KeyboardEvent) {
     if (event.key !== "Tab" || !dialogRef.current) return;
 
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
-    );
+    // `:not([disabled])` matters: the Save button is disabled until a draft
+    // exists, and without this Tab parked on a control that does nothing.
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]),' +
+          ' textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => el.offsetParent !== null); // skip anything hidden
     if (focusable.length === 0) return;
 
     const first = focusable[0]!;
@@ -127,7 +136,7 @@ export function QuickCapture() {
 
     setIsBusy(true);
     try {
-      await apiFetch("/transactions", {
+      const created = await apiFetch<Transaction>("/transactions", {
         method: "POST",
         body: JSON.stringify({
           accountId: draft.accountId,
@@ -136,13 +145,16 @@ export function QuickCapture() {
           categoryId: draft.categoryId,
           occurredAt: draft.occurredAt,
           note: draft.note,
-          source: "capture",
         }),
       });
-      // Fire-and-forget: records that this parse was good enough to keep.
+
+      // Records that this parse was good enough to keep — and stamps the row's
+      // provenance server-side. `source` is deliberately NOT sent above: a
+      // client that can name its own source can lie about how a row was made.
+      // Fire-and-forget, because a failed metric must not fail a saved expense.
       apiFetch("/capture/accepted", {
         method: "POST",
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, transactionId: created.id }),
       }).catch(() => {});
 
       queryClient.invalidateQueries();

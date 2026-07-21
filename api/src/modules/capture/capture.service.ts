@@ -105,17 +105,37 @@ export const captureService = {
     return result;
   },
 
-  /** Records that a draft was actually saved — the acceptance-rate metric. */
-  async markAccepted(userId: string, inputText: string): Promise<void> {
+  /**
+   * Records that a draft was actually saved — the acceptance-rate metric — and
+   * stamps the resulting row's provenance.
+   *
+   * `source` is set HERE rather than accepted in the create payload: provenance
+   * is a fact about how a row came to exist, so only the server should be able to
+   * assert it. The update is scoped by userId, so it can never reach another
+   * user's transaction even with a valid-looking id.
+   */
+  async markAccepted(
+    userId: string,
+    inputText: string,
+    transactionId: string,
+  ): Promise<void> {
     const latest = await prisma.captureLog.findFirst({
       where: { userId, inputText },
       orderBy: { createdAt: "desc" },
     });
-    if (latest) {
-      await prisma.captureLog.update({
-        where: { id: latest.id },
-        data: { accepted: true },
+
+    await prisma.$transaction(async (tx) => {
+      if (latest) {
+        await tx.captureLog.update({
+          where: { id: latest.id },
+          data: { accepted: true },
+        });
+      }
+
+      await tx.transaction.updateMany({
+        where: { id: transactionId, userId, deletedAt: null },
+        data: { source: "capture" },
       });
-    }
+    });
   },
 };
