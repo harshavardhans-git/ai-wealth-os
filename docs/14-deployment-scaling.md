@@ -1,6 +1,19 @@
 # Chapter 14 — Deployment & Scaling Strategy
 
-> Status: **Draft for review** · Depends on: Ch 6 (topology, stateless API, async seam), Ch 12 (secrets), Ch 13 (CI)
+> ## ⚠️ AMENDED — no AI vendor in the deployed system
+>
+> This chapter's topology diagram, cost table, secrets list and scaling
+> bottleneck #5 all assume a Claude API key in production. There isn't one
+> (ADR-001), so: nothing to budget for, nothing to rotate, and "AI cost" is not
+> a scaling limit. The ~$0/month figure holds for a stronger reason than the
+> chapter gives — it is $0 by construction, not by careful rationing.
+>
+> Two other corrections: the test database is a throwaway `postgres:16` service
+> container in CI, not a Neon branch; and the pipeline now runs
+> **lint → typecheck → test → build → audit**, with the lint step added in the
+> post-audit pass. See [Chapter 16 · ADR-001](./16-decision-log.md).
+
+> Status: **Locked, with one amendment** · Depends on: Ch 6 (topology, stateless API), Ch 12 (secrets), Ch 13 (CI)
 > Locked upstream: monorepo · manual warm-up for v1 · ~$0/month.
 
 Two jobs here: (1) get the app **live on a public URL at $0**, and (2) tell an **honest

@@ -82,8 +82,16 @@ const BUDGETS = [
   { category: "Entertainment", amount: 2000 },
 ];
 
-/** Pre-cached AI parses so the Sprint 4 capture demo is instant and free. */
-const AI_SAMPLES = [
+/**
+ * Sample capture history, so a demo account's capture-log shows real usage
+ * rather than an empty table.
+ *
+ * These were originally a CACHE — pre-computed answers so the capture demo cost
+ * nothing to run against an LLM. ADR-001 removed the LLM, so there is nothing
+ * left to cache: the parser is a pure function that runs in microseconds for
+ * free. They stay only as seeded history, and nothing reads them back.
+ */
+const CAPTURE_SAMPLES = [
   { input: "coffee 250 yesterday", category: "Food & Dining", amount: 250 },
   { input: "uber to office 180", category: "Transport", amount: 180 },
   { input: "groceries 1450 at bigbasket", category: "Groceries", amount: 1450 },
@@ -256,9 +264,9 @@ export const demoService = {
 
     await prisma.budget.createMany({ data: budgetRows });
 
-    // Warm the AI cache so Sprint 4's capture demo is instant and costs nothing.
+    // Seeded capture history — not a cache. See CAPTURE_SAMPLES above.
     await prisma.captureLog.createMany({
-      data: AI_SAMPLES.map((sample) => ({
+      data: CAPTURE_SAMPLES.map((sample) => ({
         userId,
         inputText: sample.input,
         parsedJson: {

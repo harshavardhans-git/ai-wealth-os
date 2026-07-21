@@ -1,6 +1,22 @@
 # Chapter 6 — System Architecture
 
-> Status: **Draft for review** · Depends on: Ch 4 (routes), Ch 5 (data)
+> ## ⚠️ AMENDED — the fourth runtime component was never built
+>
+> §6.1 and §6.2 below describe **four** runtime pieces, the fourth being a hosted
+> Claude API reached over HTTPS with a key. That component does not exist:
+> ADR-001 replaced the model with a deterministic in-process parser, so the
+> shipped topology is **three** pieces — Next client, Express API, Postgres.
+>
+> Two consequences follow, and both are improvements: there is no third-party
+> egress from the API at all, and the "~1–2 s AI parse" latency budget in §6.9 is
+> now sub-millisecond. §6.6's demo-mode branch is likewise gone — with a free
+> parser there is nothing to cache and nothing to fall back to.
+>
+> Everything else in this chapter — the service split, the stateless contract,
+> the config discipline, the write pipeline — is what shipped. See
+> [Chapter 16 · ADR-001](./16-decision-log.md).
+
+> Status: **Locked, with one amendment** · Depends on: Ch 4 (routes), Ch 5 (data)
 > Locked upstream: ORM = **Prisma**; transfers via `transfer_group_id`.
 
 Chapters 1–5 defined *what* the product is. From here we design *how the running

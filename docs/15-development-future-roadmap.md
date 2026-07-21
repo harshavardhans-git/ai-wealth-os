@@ -1,6 +1,11 @@
 # Chapter 15 — Development Roadmap & Future Roadmap
 
-> Status: **Draft for review** · Depends on: everything · Closes the loop from Ch 0.
+> Status: **Complete — Phase 1 shipped** · Depends on: everything · Closes the loop from Ch 0.
+>
+> The plan below is left as it was written, so the estimate can be compared against
+> what happened. §15.2's table now carries an outcome column; where a sprint's
+> stated deliverable was *not* built, that is recorded rather than quietly edited
+> out. The two that changed shape (`ClaudeAdapter`, demo-mode cache) are ADR-001.
 
 The final chapter turns the blueprint into an **executable build order** — the sequence
 a developer could start Monday morning — and then sketches the Phase 2–4 future the
@@ -28,6 +33,8 @@ architecture already accommodates.
    writes into a stable, tested data model (Ch 3, Ch 9).
 4. **Crown-jewel tests first** — money exactness and cross-user 404 (Ch 13) are written
    before the features they guard.
+   *(Held for money, not for cross-user isolation — see the Sprint 0 outcome below.
+   The gap went unnoticed for six sprints precisely because CI was green.)*
 
 ---
 
@@ -36,14 +43,15 @@ architecture already accommodates.
 Office-time pace, so "sprint" = a coherent chunk, not a fixed calendar. Each maps to
 feature IDs (Ch 3) and ends at a runnable state.
 
-| Sprint | Goal | Delivers | Exit state |
-|--------|------|----------|-----------|
-| **0 · Skeleton** | wire everything | monorepo, CI, deploy to 3 hosts, design tokens + `MoneyText`, Prisma schema + first migration, **auth module (C1)** + crown-jewel tests (money, cross-user) | empty app live on a public URL, CI green, you can sign up |
-| **1 · Core slice** | transactions end-to-end | accounts (C2), categories + seed (C4), **transactions CRUD (C3)** through the repo→service→API→hook→UI stack | you can add/list/edit a real transaction in the browser |
-| **2 · The interpreted view** | dashboard + budgets | dashboard summary (C6), budgets + progress (C5), multi-currency plumbing (C9), the pattern/feature components (Ch 11) | dashboard answers "how am I doing?"; budgets show live progress |
-| **3 · Friction-killers** | real data in | CSV import (C7), **engineered seed/demo dataset (C8)** + pre-seeded `ai_parse_logs` | app looks *full* on first load; you can import your own CSV |
-| **4 · The flagship** | the wedge | `ClaudeAdapter`, demo-mode cache, **NL capture (A1)** + Quick-Capture overlay, confidence→fallback routing | type "coffee 250 yesterday" → a saved, categorized transaction |
-| **5 · Ship** | polish + prove | DoD verification, dark-mode pass, a11y check, README (scaling table, security non-goals, warm-up), Sentry, `/verify` + `/security-review` | **DoD met (Ch 3 §3.4); portfolio-ready** |
+| Sprint | Goal | Delivers | Outcome |
+|--------|------|----------|---------|
+| **0 · Skeleton** | wire everything | monorepo, CI, deploy to 3 hosts, design tokens + `MoneyText`, Prisma schema + first migration, **auth module (C1)** + crown-jewel tests (money, cross-user) | ✅ shipped `48e1b33` — **except** the cross-user test, which did not land until `f29018b`, six sprints later. Principle 4 below says "crown-jewel tests first"; in practice only the money test was. |
+| **1 · Core slice** | transactions end-to-end | accounts (C2), categories + seed (C4), **transactions CRUD (C3)** | ✅ shipped `53a98a1`. The *edit* half of CRUD had no UI until `c69ae00`. |
+| **2 · The interpreted view** | dashboard + budgets | dashboard summary (C6), budgets + progress (C5), multi-currency plumbing (C9) | ✅ shipped `acff859` |
+| **3 · Friction-killers** | real data in | CSV import (C7), **engineered demo dataset (C8)** + pre-seeded capture logs | ✅ shipped `a914fd1`. The seeded logs were meant as an AI cache; ADR-001 left them as decorative history. |
+| **4 · The flagship** | the wedge | ~~`ClaudeAdapter`, demo-mode cache~~, **NL capture (A1)** + Quick-Capture overlay, confidence→fallback routing | ⚠️ shipped `33ebe15` **with the AI removed** — see [ADR-001](./16-decision-log.md). Capture, the overlay and fallback routing all shipped; the adapter and cache were deliberately not built. |
+| **5 · Ship** | polish + prove | DoD verification, dark-mode pass, a11y check, README, ~~Sentry~~, `/verify` + `/security-review` | ⚠️ shipped `0a0da1d` + `00848d2`. **Sentry was not added** — request-id logging (`7bfc5a2`) covers the need at $0. |
+| **6 · Audit** | close the gap between docs and code | full doc-vs-code audit, then four remediation waves | ✅ `d677a12` (9 defects), `c69ae00` (unreachable features), `7bfc5a2` (DB constraints + lint), this pass (doc truth). Added after the plan was written — see §15.6. |
 
 > **Mentor lens — notice Sprint 0 deploys *nothing useful* on purpose.** A "walking
 > skeleton" (empty app, fully wired, live) feels like slow progress but is the highest-
@@ -140,10 +148,23 @@ major restructuring — the goal set in Chapter 0.
   top **security control** (Ch 12) *and* a **must-have test** (Ch 13).
 - One money rule (integer minor units) runs from the **schema** (Ch 5) to **`MoneyText`**
   (Ch 11) to the **first test** (Ch 13).
-- One AI discipline (adapter + confirm + re-auth + demo cache) became the **flagship**
-  (Ch 9), the **security posture** (Ch 12), and the **template for every future AI
-  feature** (Ch 15).
+- One capture discipline (**propose-never-persist + re-authorize every id + bound the
+  input + log the attempt**) became the **flagship** (Ch 9), the **security posture**
+  (Ch 12), and the template for any future inference feature. It survived ADR-001
+  entirely intact, which is the point: none of those guardrails were ever really about
+  the model. The adapter and demo cache in the original list did *not* survive — they
+  were the parts that were about the vendor.
 - Two Ch 6 decisions (stateless API, async seam) pre-paid the **scaling story** (Ch 14).
 
 That consistency — where a decision made once shows up correctly everywhere — is the
 real signal that this was architected, not assembled.
+
+**And the honest counterweight.** The post-build audit (Sprint 6) found the docs and the
+code had drifted apart in ways review had not caught: eight CHECK constraints specified
+and never created, a refresh-rotation guarantee the code did not actually provide,
+transfers fully built on the server with no way to reach them, and a landing page still
+shipping the walking skeleton's debug panels. None of that showed up in CI, because CI
+tested what was built rather than what was promised. The lesson worth carrying: a
+specification is only enforced to the extent something automated reads it. What was
+fixable by a test or a lint rule is now guarded by one; what was not is written down
+here, where the next reader will see it.

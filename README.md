@@ -87,7 +87,7 @@ npm run dev:web                   # terminal 2 → :3000
 ```
 
 ```bash
-npm test                          # 44 tests across both workspaces
+npm test                          # 77 tests across both workspaces (61 API + 16 web)
 npm run typecheck                 # both workspaces
 ```
 

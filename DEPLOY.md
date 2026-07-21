@@ -37,7 +37,7 @@ Already provisioned. Copy the connection string from the Neon dashboard; it beco
 Against the production database, once:
 
 ```bash
-DATABASE_URL="<neon-url>" npm run db:seed -w @ai-wealth-os/api
+DATABASE_URL="<neon-url>" npm run db:seed -w @wealth-os/api
 ```
 
 ---

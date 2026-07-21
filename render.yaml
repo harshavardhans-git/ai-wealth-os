@@ -21,8 +21,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DEMO_MODE
-        value: "true"
       # Set these in the Render dashboard — never commit real values (Ch 12).
       - key: DATABASE_URL
         sync: false
@@ -32,5 +30,5 @@ services:
         sync: false
       - key: WEB_ORIGIN
         sync: false # e.g. https://ai-wealth-os.vercel.app
-      # ANTHROPIC_API_KEY is added in Sprint 4 (AI capture). Left out on purpose:
-      # the env schema rejects an empty string, so a blank value would crash boot.
+      # No AI vendor key: capture is a deterministic parser, not a model call
+      # (ADR-001). Nothing here talks to a third party.
