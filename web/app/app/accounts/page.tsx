@@ -11,13 +11,23 @@ import {
   LoadingState,
 } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
-import { useAccounts, useCreateAccount } from "@/hooks/use-finance";
+import {
+  useAccounts,
+  useCreateAccount,
+  useUpdateAccount,
+} from "@/hooks/use-finance";
 
 const ACCOUNT_TYPES = ["bank", "cash", "card", "wallet"] as const;
 
 export default function AccountsPage() {
   const accounts = useAccounts();
   const createAccount = useCreateAccount();
+  const updateAccount = useUpdateAccount();
+
+  // Renaming inline rather than in a dialog: it edits one field on a row you
+  // are already looking at, and a modal for that is ceremony.
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const [name, setName] = useState("");
   const [type, setType] = useState<(typeof ACCOUNT_TYPES)[number]>("bank");
@@ -135,18 +145,63 @@ export default function AccountsPage() {
             {accounts.data.map((account) => (
               <li
                 key={account.id}
-                className="flex items-center justify-between px-5 py-3.5 text-sm"
+                className="flex items-center justify-between gap-4 px-5 py-3.5 text-sm"
               >
-                <div>
-                  <p className="font-medium">{account.name}</p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {account.type} · {account.currency}
-                  </p>
-                </div>
-                <MoneyText
-                  amountMinor={account.balanceMinor}
-                  currency={account.currency}
-                />
+                {renamingId === account.id ? (
+                  <form
+                    className="flex flex-1 items-center gap-2"
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      await updateAccount.mutateAsync({
+                        id: account.id,
+                        name: renameValue,
+                      });
+                      setRenamingId(null);
+                    }}
+                  >
+                    <Input
+                      autoFocus
+                      aria-label={`New name for ${account.name}`}
+                      value={renameValue}
+                      onChange={(event) => setRenameValue(event.target.value)}
+                    />
+                    <Button type="submit" disabled={updateAccount.isPending}>
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setRenamingId(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </form>
+                ) : (
+                  <>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{account.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {account.type} · {account.currency}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-4">
+                      <MoneyText
+                        amountMinor={account.balanceMinor}
+                        currency={account.currency}
+                      />
+                      <Button
+                        variant="ghost"
+                        className="px-0 text-xs"
+                        onClick={() => {
+                          setRenamingId(account.id);
+                          setRenameValue(account.name);
+                        }}
+                      >
+                        Rename
+                      </Button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

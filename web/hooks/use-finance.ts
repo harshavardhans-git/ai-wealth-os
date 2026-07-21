@@ -17,12 +17,22 @@ import { apiFetch } from "@/lib/api-client";
  * most common bug in a Query codebase when forgotten.
  */
 
+export interface TransactionFilters {
+  limit?: number;
+  offset?: number;
+  accountId?: string;
+  categoryId?: string;
+  type?: "income" | "expense" | "transfer";
+  from?: string;
+  to?: string;
+}
+
 export const queryKeys = {
   accounts: ["accounts"] as const,
   categories: ["categories"] as const,
   budgets: ["budgets"] as const,
   dashboard: ["dashboard"] as const,
-  transactions: (filters?: Record<string, unknown>) =>
+  transactions: (filters?: TransactionFilters) =>
     ["transactions", filters ?? {}] as const,
 };
 
@@ -165,13 +175,17 @@ export function useCategories(enabled = true) {
   });
 }
 
-export function useTransactions(
-  filters: { limit?: number; offset?: number } = {},
-  enabled = true,
-) {
+/**
+ * The filters are part of the query key, so each distinct view is cached
+ * separately and switching back to a previous filter is instant. Empty values
+ * are dropped rather than sent blank — otherwise `?accountId=` would become a
+ * different key from no filter at all, and cache the same result twice.
+ */
+export function useTransactions(filters: TransactionFilters = {}, enabled = true) {
   const params = new URLSearchParams();
-  if (filters.limit) params.set("limit", String(filters.limit));
-  if (filters.offset) params.set("offset", String(filters.offset));
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
   const query = params.toString();
 
   return useQuery({
@@ -181,6 +195,78 @@ export function useTransactions(
         `/transactions${query ? `?${query}` : ""}`,
       ),
     enabled,
+    // Keeps the previous page on screen while the next one loads, instead of
+    // collapsing the table to a skeleton on every page change.
+    placeholderData: (previous) => previous,
+  });
+}
+
+interface UpdateTransactionBody {
+  id: string;
+  amount?: string;
+  categoryId?: string | null;
+  occurredAt?: string;
+  note?: string | null;
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateTransactionBody) =>
+      apiFetch<Transaction>(`/transactions/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => invalidateMoney(queryClient),
+  });
+}
+
+interface CreateTransferBody {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: string;
+  occurredAt?: string;
+  note?: string | null;
+}
+
+/**
+ * A transfer writes two linked legs atomically (Ch 5 §5.8), so it has its own
+ * endpoint rather than being a `type` on the normal create.
+ */
+export function useCreateTransfer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CreateTransferBody) =>
+      apiFetch<Transaction[]>("/transactions/transfer", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => invalidateMoney(queryClient),
+  });
+}
+
+export function useUpdateAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; name?: string }) =>
+      apiFetch<AccountWithBalance>(`/accounts/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => invalidateMoney(queryClient),
+  });
+}
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<void>(`/accounts/${id}`, { method: "DELETE" }),
+    onSuccess: () => invalidateMoney(queryClient),
   });
 }
 

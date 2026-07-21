@@ -22,6 +22,13 @@
   --radius: 0.625rem;
   --radius-lg: 1rem;
 
+  /* Elevation and the modal scrim. Tokenised because both differ per theme —
+     a hard-coded black/40 scrim reads as a grey haze over a dark surface. */
+  --shadow: 0 1px 2px rgb(16 18 24 / 0.06), 0 1px 3px rgb(16 18 24 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(16 18 24 / 0.1),
+    0 4px 6px -4px rgb(16 18 24 / 0.1);
+  --scrim: rgb(16 18 24 / 0.4);
+
   /* ── Chart palette ──────────────────────────────────────────────────────
      Validated with the data-viz validator, not chosen by eye. Notably the
      obvious choice for income/expense — our semantic green/red — FAILED
@@ -56,6 +63,13 @@
     --negative: #f2617a;
     --warning: #e3a53d;
 
+    /* Deeper shadow and a heavier scrim: on a near-black surface the light
+       values are invisible. */
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6),
+      0 4px 6px -4px rgb(0 0 0 / 0.5);
+    --scrim: rgb(0 0 0 / 0.6);
+
     /* Dark steps are separately validated against the dark surface —
        not an automatic flip of the light values. */
     --chart-income: #3987e5;
@@ -83,6 +97,11 @@
   --positive: #3ecf8e;
   --negative: #f2617a;
   --warning: #e3a53d;
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6),
+    0 4px 6px -4px rgb(0 0 0 / 0.5);
+  --scrim: rgb(0 0 0 / 0.6);
 
   --chart-income: #3987e5;
   --chart-expense: #d95926;
