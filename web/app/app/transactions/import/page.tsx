@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/field";
+import { Field, Select } from "@/components/ui/field";
 import { MoneyText } from "@/components/patterns/money-text";
 import { apiFetch } from "@/lib/api-client";
 import { parseAmount, parseCsv, parseFlexibleDate } from "@/lib/csv";
-import { useAccounts, useCreateTransaction } from "@/hooks/use-finance";
+import { useAccounts } from "@/hooks/use-finance";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ImportResult {

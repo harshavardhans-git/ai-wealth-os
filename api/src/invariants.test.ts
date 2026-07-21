@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import request from "supertest";
+import { prisma } from "./lib/prisma";
 import {
   api,
   app,
@@ -234,6 +235,90 @@ describe("INVARIANT 7 — auth lifecycle", () => {
       .expect(403);
 
     await postRefresh(refreshCookie).expect(200);
+  });
+});
+
+// ── DATABASE-LEVEL INTEGRITY ─────────────────────────────────────────────────
+// These write with raw SQL, deliberately bypassing zod and the service layer.
+// That is the entire point: validation in the API protects requests, but a seed
+// script, a `createMany`, or a psql session writes without passing any of it.
+// If the rule only lives in TypeScript, the database does not actually hold it.
+describe("the database enforces its own rules", () => {
+  it("refuses a negative amount", async () => {
+    const user = await createUser("chk_amt");
+    const account = await makeAccount(user);
+
+    await expect(
+      prisma.$executeRawUnsafe(
+        `INSERT INTO transactions
+           (id, user_id, account_id, type, amount_minor, currency,
+            amount_base_minor, occurred_at, source, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1::uuid, $2::uuid, 'expense', -500, 'INR',
+                 -500, now(), 'manual', now(), now())`,
+        user.id,
+        account.id,
+      ),
+    ).rejects.toThrow(/amount_positive_check/);
+  });
+
+  it("refuses an unknown transaction type and an unknown source", async () => {
+    const user = await createUser("chk_type");
+    const account = await makeAccount(user);
+
+    const insert = (type: string, source: string) =>
+      prisma.$executeRawUnsafe(
+        `INSERT INTO transactions
+           (id, user_id, account_id, type, amount_minor, currency,
+            amount_base_minor, occurred_at, source, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, 100, 'INR',
+                 100, now(), $4, now(), now())`,
+        user.id,
+        account.id,
+        type,
+        source,
+      );
+
+    await expect(insert("refund", "manual")).rejects.toThrow(/type_check/);
+    // 'ai' was the old name for this source before ADR-001 renamed it.
+    await expect(insert("expense", "ai")).rejects.toThrow(/source_check/);
+  });
+
+  it("refuses a transfer with no direction, and a direction on a non-transfer", async () => {
+    const user = await createUser("chk_dir");
+    const account = await makeAccount(user);
+
+    const insert = (type: string, direction: string | null) =>
+      prisma.$executeRawUnsafe(
+        `INSERT INTO transactions
+           (id, user_id, account_id, type, amount_minor, currency,
+            amount_base_minor, occurred_at, source, transfer_direction,
+            created_at, updated_at)
+         VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, 100, 'INR',
+                 100, now(), 'manual', $4, now(), now())`,
+        user.id,
+        account.id,
+        type,
+        direction,
+      );
+
+    // A transfer leg with no direction breaks the balance SQL, which keys on it.
+    await expect(insert("transfer", null)).rejects.toThrow(/transfer_direction/);
+    // And a direction on an expense is meaningless — it would be read as a leg.
+    await expect(insert("expense", "in")).rejects.toThrow(/transfer_direction/);
+  });
+
+  it("refuses a duplicate system category", async () => {
+    // The composite UNIQUE (user_id, name, kind) does not cover these rows,
+    // because Postgres treats NULL user_ids as distinct from one another.
+    await expect(
+      prisma.$executeRawUnsafe(
+        `INSERT INTO categories (id, user_id, name, kind, is_system, created_at, updated_at)
+         SELECT gen_random_uuid(), NULL, name, kind, true, now(), now()
+         FROM categories WHERE user_id IS NULL LIMIT 1`,
+      ),
+      // 23505 = unique_violation. Asserting the SQLSTATE rather than the index
+      // name, because Prisma rewrites the message to name the columns instead.
+    ).rejects.toThrow(/23505/);
   });
 });
 

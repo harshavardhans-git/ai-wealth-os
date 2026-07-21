@@ -1,0 +1,35 @@
+version: 2
+
+# Dependency updates (Ch 12 §12.2, R3).
+#
+# The chapter names Dependabot as the mitigation for "a transitive dependency
+# ships a vulnerability", and it was never configured — so the only dependency
+# check in the repo was `npm audit` in CI, which reports problems but fixes none.
+#
+# Weekly, not daily: a portfolio project does not need a PR every morning, and a
+# queue nobody reads is the same as no alerts at all.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Patch and minor bumps arrive as one PR per ecosystem group rather than a
+    # dozen individually — the noise is what makes people stop reviewing these.
+    groups:
+      production-dependencies:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+      development-dependencies:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+    # Majors stay individual and deliberate: they are the ones that break things,
+    # and they deserve their own review (see the vitest 3→4 bump in the log).
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

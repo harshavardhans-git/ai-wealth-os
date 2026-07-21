@@ -18,6 +18,7 @@
     "test": "npm test -w @wealth-os/api && npm test -w @wealth-os/web",
     "db:migrate": "npm run prisma:migrate -w @wealth-os/api",
     "db:seed": "npm run db:seed -w @wealth-os/api",
-    "db:studio": "npm run prisma:studio -w @wealth-os/api"
+    "db:studio": "npm run prisma:studio -w @wealth-os/api",
+    "lint": "npm run lint --workspaces --if-present"
   }
 }

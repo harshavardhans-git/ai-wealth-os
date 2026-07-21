@@ -4,14 +4,43 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
 export type Theme = "light" | "dark" | "system";
 
 const STORAGE_KEY = "wealth-os-theme";
+
+/**
+ * localStorage is external state, so it is read with useSyncExternalStore rather
+ * than copied into useState inside an effect.
+ *
+ * The effect version rendered once with the wrong value and then re-rendered to
+ * correct itself — a cascading render React explicitly warns about. This reads
+ * the real value during render, and `getServerSnapshot` keeps SSR consistent:
+ * the server has no localStorage, so it reports "system" and hydration matches.
+ */
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  // Also react to another TAB changing the theme — same user, same preference.
+  window.addEventListener("storage", listener);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function getSnapshot(): Theme {
+  return (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "system";
+}
+
+/** No localStorage on the server; "system" is what the CSS already defaults to. */
+function getServerSnapshot(): Theme {
+  return "system";
+}
 
 interface ThemeContextValue {
   theme: Theme;
@@ -30,16 +59,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
  * query with — in both directions.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    if (stored) setThemeState(stored);
-  }, []);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-
     if (next === "system") {
       localStorage.removeItem(STORAGE_KEY);
       document.documentElement.removeAttribute("data-theme");
@@ -47,6 +69,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(STORAGE_KEY, next);
       document.documentElement.setAttribute("data-theme", next);
     }
+    // localStorage writes don't fire `storage` in the tab that made them, so
+    // subscribers are notified explicitly.
+    listeners.forEach((listener) => listener());
   }, []);
 
   return (

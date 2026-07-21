@@ -32,10 +32,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     if (!isLoading && !user) router.replace("/login");
   }, [isLoading, user, router]);
 
-  // Navigating closes the drawer. Without this, tapping a link on a phone
-  // leaves the menu covering the page you just asked for.
-  useEffect(() => setIsNavOpen(false), [pathname]);
-
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-[var(--text-muted)]">
@@ -54,6 +50,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Link
             key={item.href}
             href={item.href}
+            // Closed on click rather than in an effect watching `pathname`:
+            // navigation is the event, so handling it here avoids a render pass
+            // that exists only to undo the previous one.
+            onClick={() => setIsNavOpen(false)}
             aria-current={isActive ? "page" : undefined}
             className={`rounded-[var(--radius-sm)] px-2 py-1.5 text-sm transition-colors ${
               isActive

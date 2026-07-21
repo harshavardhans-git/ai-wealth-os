@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { requestContext } from "./middleware/request-context";
 import { accountsRouter } from "./modules/accounts/accounts.routes";
 import { authRouter } from "./modules/auth/auth.routes";
 import { budgetsRouter } from "./modules/budgets/budgets.routes";
@@ -20,7 +21,8 @@ import { transactionsRouter } from "./modules/transactions/transactions.routes";
  * with Supertest (Ch 6, Ch 13).
  *
  * Middleware order matters (Ch 7 §7.3):
- * security headers → CORS → body parse → cookies → routes → 404 → error handler.
+ * security headers → CORS → request id + log → body parse → cookies →
+ * rate limit → routes → 404 → error handler.
  */
 export function createApp(): Express {
   const app = express();
@@ -34,6 +36,9 @@ export function createApp(): Express {
 
   app.use(helmet()); // security headers (Ch 12)
   app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
+  // Before the body parser, so a request that dies parsing a malformed body is
+  // still logged and still carries an id.
+  app.use(requestContext);
   app.use(express.json({ limit: "1mb" })); // cap body size (Ch 12)
   app.use(cookieParser()); // read the httpOnly refresh cookie (Ch 10)
 

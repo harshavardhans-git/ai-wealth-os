@@ -54,6 +54,12 @@ jobs:
       - name: Seed system categories
         run: npm run db:seed
 
+      # Cheapest gate first: lint catches the layering rules Ch 7/8 mark as
+      # "block the PR" — a route importing Prisma, a component calling fetch —
+      # which no other step in this pipeline can see.
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
 

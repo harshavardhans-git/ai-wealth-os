@@ -1,11 +1,15 @@
-// AI Wealth OS — database schema (Ch 5).
+// Wealth OS — database schema (Ch 5).
 // Conventions: PascalCase models → snake_case tables (@@map); camelCase fields →
 // snake_case columns (@map). Money is BigInt minor units (Ch 5 D1) — the repository
 // layer converts BigInt→number at the API edge; the wire type is `number`.
 //
-// NOTE (follow-up migration): `type` / `kind` / `source` / `status` / `period` are
-// String columns whose allowed values live in @ai-wealth-os/types (single source of
-// truth). Add PG CHECK constraints for them via a raw-SQL migration after `migrate dev`.
+// `type` / `kind` / `source` / `status` / `period` are String columns whose allowed
+// values live in @wealth-os/types (single source of truth) AND are enforced by PG
+// CHECK constraints — see migrations/20260721140000_constraints_and_timestamptz.
+// Prisma cannot express CHECKs, so they are hand-written; keep both in step.
+//
+// Timestamps are timestamptz. A naive timestamp means whatever zone the reading
+// server assumes, which would shift every date if the deploy region changed.
 
 generator client {
   provider = "prisma-client-js"
@@ -25,8 +29,8 @@ model User {
   isDemo       Boolean @default(false) @map("is_demo")
   tokenVersion Int     @default(0) @map("token_version") // Ch 10 refresh revocation
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   accounts      Account[]
   categories    Category[]
@@ -52,12 +56,12 @@ model User {
 model RefreshToken {
   id         String    @id @default(uuid()) @db.Uuid
   userId     String    @map("user_id") @db.Uuid
-  expiresAt  DateTime  @map("expires_at")
-  revokedAt  DateTime? @map("revoked_at")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
   /// The token this one was rotated into — the audit trail for a reuse event.
   replacedBy String?   @map("replaced_by") @db.Uuid
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -74,10 +78,10 @@ model Account {
   currency            String    @db.Char(3)
   openingBalanceMinor BigInt    @default(0) @map("opening_balance_minor")
   isArchived          Boolean   @default(false) @map("is_archived")
-  deletedAt           DateTime? @map("deleted_at") // soft delete (Ch 5 D4)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3) // soft delete (Ch 5 D4)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
@@ -87,16 +91,16 @@ model Account {
 }
 
 model Category {
-  id        String  @id @default(uuid()) @db.Uuid
-  userId    String? @map("user_id") @db.Uuid // NULL = shared system default (Ch 5)
-  name      String
-  kind      String // 'income' | 'expense'
-  icon      String?
-  color     String?
-  isSystem  Boolean @default(false) @map("is_system")
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String? @map("user_id") @db.Uuid // NULL = shared system default (Ch 5)
+  name     String
+  kind     String // 'income' | 'expense'
+  icon     String?
+  color    String?
+  isSystem Boolean @default(false) @map("is_system")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user         User?         @relation(fields: [userId], references: [id])
   transactions Transaction[]
@@ -108,27 +112,27 @@ model Category {
 }
 
 model Transaction {
-  id              String    @id @default(uuid()) @db.Uuid
-  userId          String    @map("user_id") @db.Uuid
-  accountId       String    @map("account_id") @db.Uuid
-  categoryId      String?   @map("category_id") @db.Uuid
-  type            String // 'income' | 'expense' | 'transfer'
-  amountMinor     BigInt    @map("amount_minor") // always > 0; direction via `type`
-  currency        String    @db.Char(3)
-  amountBaseMinor BigInt    @map("amount_base_minor") // in user's base currency (Ch 5 §5.5)
-  occurredAt      DateTime  @map("occurred_at") // when it happened, not when logged
-  note            String?
-  source          String    @default("manual") // 'manual' | 'ai' | 'import'
-  transferGroupId String?   @map("transfer_group_id") @db.Uuid // links a transfer pair
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  accountId         String    @map("account_id") @db.Uuid
+  categoryId        String?   @map("category_id") @db.Uuid
+  type              String // 'income' | 'expense' | 'transfer'
+  amountMinor       BigInt    @map("amount_minor") // always > 0; direction via `type`
+  currency          String    @db.Char(3)
+  amountBaseMinor   BigInt    @map("amount_base_minor") // in user's base currency (Ch 5 §5.5)
+  occurredAt        DateTime  @map("occurred_at") @db.Timestamptz(3) // when it happened, not when logged
+  note              String?
+  source            String    @default("manual") // 'manual' | 'capture' | 'import'
+  transferGroupId   String?   @map("transfer_group_id") @db.Uuid // links a transfer pair
   // 'out' on the leg leaving the source account, 'in' on the leg entering the
   // destination. NULL for income/expense. Amounts stay positive (Ch 5), so this
   // is what makes a transfer's direction derivable when computing balances.
-  transferDirection String? @map("transfer_direction")
-  importBatchId   String?   @map("import_batch_id") @db.Uuid
-  deletedAt       DateTime? @map("deleted_at") // soft delete (Ch 5 D4)
+  transferDirection String?   @map("transfer_direction")
+  importBatchId     String?   @map("import_batch_id") @db.Uuid
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(3) // soft delete (Ch 5 D4)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user        User         @relation(fields: [userId], references: [id])
   account     Account      @relation(fields: [accountId], references: [id])
@@ -151,8 +155,8 @@ model Budget {
   currency    String   @db.Char(3)
   startsOn    DateTime @map("starts_on") @db.Date
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user     User     @relation(fields: [userId], references: [id])
   category Category @relation(fields: [categoryId], references: [id])
@@ -169,7 +173,7 @@ model ImportBatch {
   rowCount Int    @map("row_count")
   status   String @default("pending") // 'pending' | 'committed' | 'reverted'
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
@@ -191,7 +195,7 @@ model CaptureLog {
   tokens     Int?
   accepted   Boolean? // did the user save the draft? (the wedge metric)
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id])
 
