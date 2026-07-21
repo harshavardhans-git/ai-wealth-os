@@ -6,8 +6,10 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../../lib/jwt";
+import { convertMinor } from "../../lib/fx";
+import { prisma } from "../../lib/prisma";
 import { authRepository } from "./auth.repository";
-import type { LoginInput, SignupInput } from "./auth.schema";
+import type { LoginInput, SignupInput, UpdateMeInput } from "./auth.schema";
 
 export interface PublicUser {
   id: string;
@@ -106,5 +108,75 @@ export const authService = {
     const user = await authRepository.findById(userId);
     if (!user) throw AppError.notFound("User not found");
     return toPublicUser(user);
+  },
+
+  /**
+   * Updates the profile — and, when the base currency changes, BACKFILLS every
+   * historical `amount_base_minor`.
+   *
+   * Chapter 5 §5.5 flagged this as the cost of snapshotting values in the user's
+   * reporting currency: change the reporting currency and every stored snapshot
+   * is suddenly denominated in the old one. Skipping the backfill would leave a
+   * dashboard silently adding rupees to dollars — numbers that look fine and are
+   * wrong, which is the worst failure mode in a finance app.
+   *
+   * Done per currency rather than per row: conversion is a linear scale, so each
+   * distinct currency needs exactly one UPDATE.
+   */
+  async updateMe(userId: string, input: UpdateMeInput): Promise<PublicUser> {
+    const current = await authRepository.findById(userId);
+    if (!current) throw AppError.notFound("User not found");
+
+    const nextCurrency = input.baseCurrency ?? current.baseCurrency;
+    const currencyChanged = nextCurrency !== current.baseCurrency;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.baseCurrency ? { baseCurrency: nextCurrency } : {}),
+        },
+      });
+
+      if (!currencyChanged) return;
+
+      const currencies = await tx.transaction.findMany({
+        where: { userId },
+        select: { currency: true },
+        distinct: ["currency"],
+      });
+
+      for (const { currency } of currencies) {
+        // The scale factor for one unit, applied to every row in that currency.
+        const ratio = convertMinor(1_000_000, currency, nextCurrency) / 1_000_000;
+        await tx.$executeRaw`
+          UPDATE transactions
+          SET amount_base_minor = ROUND(amount_minor * ${ratio}::numeric)
+          WHERE user_id = ${userId}::uuid AND currency = ${currency}
+        `;
+      }
+
+      // Budget limits are compared against base-currency spend, so they have to
+      // move with it or every budget silently changes meaning.
+      const budgets = await tx.budget.findMany({
+        where: { userId },
+        select: { currency: true },
+        distinct: ["currency"],
+      });
+
+      for (const { currency } of budgets) {
+        const ratio = convertMinor(1_000_000, currency, nextCurrency) / 1_000_000;
+        await tx.$executeRaw`
+          UPDATE budgets
+          SET amount_minor = ROUND(amount_minor * ${ratio}::numeric),
+              currency = ${nextCurrency}
+          WHERE user_id = ${userId}::uuid AND currency = ${currency}
+        `;
+      }
+    });
+
+    const updated = await authRepository.findById(userId);
+    return toPublicUser(updated!);
   },
 };

@@ -95,6 +95,60 @@ export function useDeleteBudget() {
   });
 }
 
+interface ProfileUpdate {
+  name?: string;
+  baseCurrency?: string;
+}
+
+/**
+ * Changing base currency rewrites every historical reporting snapshot on the
+ * server, so this invalidates everything — the dashboard, budgets and balances
+ * are all denominated differently afterwards.
+ */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: ProfileUpdate) =>
+      apiFetch<{ id: string; email: string; name: string; baseCurrency: string }>(
+        "/auth/me",
+        { method: "PATCH", body: JSON.stringify(body) },
+      ),
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: {
+      name: string;
+      kind: "income" | "expense";
+      color?: string | null;
+    }) =>
+      apiFetch<Category>("/categories", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    },
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<void>(`/categories/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    },
+  });
+}
+
 export function useAccounts(enabled = true) {
   return useQuery({
     queryKey: queryKeys.accounts,

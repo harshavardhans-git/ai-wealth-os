@@ -263,6 +263,111 @@ describe("INVARIANT 1 — money is exact end to end", () => {
   });
 });
 
+// ── SYSTEM CATEGORIES ARE READ-ONLY ──────────────────────────────────────────
+// Shared rows (userId = null) are visible to everyone and editable by no one.
+// That falls out of scoping writes by userId — no permissions system required.
+describe("categories — shared rows are read-only, custom rows are yours", () => {
+  it("lets a user create, rename and delete their own category", async () => {
+    const user = await createUser("cat");
+
+    const created = await api
+      .post("/categories", user, { name: "Pet Care", kind: "expense", color: "#3b7dd8" })
+      .expect(201);
+    expect(created.body.data.isSystem).toBe(false);
+
+    const renamed = await api
+      .patch(`/categories/${created.body.data.id}`, user, { name: "Pets" })
+      .expect(200);
+    expect(renamed.body.data.name).toBe("Pets");
+
+    await api.delete(`/categories/${created.body.data.id}`, user).expect(204);
+  });
+
+  it("refuses to edit or delete a built-in category", async () => {
+    const user = await createUser("sys");
+    const system = (await api.get("/categories", user).expect(200)).body.data.find(
+      (c: { isSystem: boolean }) => c.isSystem,
+    );
+
+    await api.patch(`/categories/${system.id}`, user, { name: "Hijacked" }).expect(404);
+    await api.delete(`/categories/${system.id}`, user).expect(404);
+  });
+
+  it("cannot see or touch another user's custom category", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+
+    const mine = await api
+      .post("/categories", alice, { name: "Alice Only", kind: "expense" })
+      .expect(201);
+
+    const bobsList = (await api.get("/categories", bob).expect(200)).body.data;
+    expect(bobsList.some((c: { id: string }) => c.id === mine.body.data.id)).toBe(false);
+
+    await api.patch(`/categories/${mine.body.data.id}`, bob, { name: "Bob's" }).expect(404);
+  });
+
+  it("refuses to delete a category still in use, rather than orphaning history", async () => {
+    const user = await createUser("inuse");
+    const account = await makeAccount(user);
+    const category = await api
+      .post("/categories", user, { name: "Temporary", kind: "expense" })
+      .expect(201);
+
+    await api.post("/transactions", user, {
+      accountId: account.id, type: "expense", amount: "100.00",
+      categoryId: category.body.data.id,
+    }).expect(201);
+
+    await api.delete(`/categories/${category.body.data.id}`, user).expect(409);
+  });
+});
+
+// ── BASE-CURRENCY CHANGE BACKFILLS HISTORY ───────────────────────────────────
+// Ch 5 §5.5 stores each transaction's value in the user's reporting currency at
+// capture time. Change the reporting currency and every stored snapshot is
+// suddenly in the OLD one — a dashboard adding rupees to dollars, which looks
+// perfectly fine and is completely wrong.
+describe("changing base currency rewrites the reporting snapshots", () => {
+  it("converts historical amounts, and leaves the original amounts untouched", async () => {
+    const user = await createUser("fx");
+    const account = await makeAccount(user, { currency: "INR" });
+
+    await api.post("/transactions", user, {
+      accountId: account.id, type: "expense", amount: "8350.00",
+    }).expect(201);
+
+    const before = (await api.get("/dashboard/summary", user).expect(200)).body.data;
+    expect(before.baseCurrency).toBe("INR");
+    expect(before.month.expenseMinor).toBe(835000);
+
+    await api.patch("/auth/me", user, { baseCurrency: "USD" }).expect(200);
+
+    const after = (await api.get("/dashboard/summary", user).expect(200)).body.data;
+    expect(after.baseCurrency).toBe("USD");
+    // ₹8,350 at the seeded rate of 83.5 is exactly $100.
+    expect(after.month.expenseMinor).toBe(10000);
+
+    // The transaction's OWN amount and currency must not move — only the
+    // reporting snapshot does. The user still spent ₹8,350.
+    const transactions = (await api.get("/transactions", user).expect(200)).body.data;
+    expect(transactions.items[0].amountMinor).toBe(835000);
+    expect(transactions.items[0].currency).toBe("INR");
+  });
+
+  it("moves budget limits with the reporting currency", async () => {
+    const user = await createUser("fxbudget");
+    const category = await expenseCategory(user);
+
+    await api.post("/budgets", user, { categoryId: category.id, amount: "8350.00" }).expect(201);
+    await api.patch("/auth/me", user, { baseCurrency: "USD" }).expect(200);
+
+    const budgets = (await api.get("/budgets", user).expect(200)).body.data;
+    expect(budgets[0].amountMinor).toBe(10000);
+    expect(budgets[0].currency).toBe("USD");
+  });
+});
+
 // ── #4/#5 · CAPTURE CANNOT WRITE BAD DATA ────────────────────────────────────
 describe("INVARIANTS 4 & 5 — capture proposes, never persists", () => {
   it("does not write anything when parsing", async () => {

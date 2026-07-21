@@ -3,7 +3,7 @@ import { env } from "../../config/env";
 import { asyncHandler } from "../../lib/async-handler";
 import { requireAuth } from "../../middleware/require-auth";
 import { validate } from "../../middleware/validate";
-import { LoginSchema, SignupSchema } from "./auth.schema";
+import { LoginSchema, SignupSchema, UpdateMeSchema } from "./auth.schema";
 import { authService } from "./auth.service";
 
 const REFRESH_COOKIE = "refresh_token";
@@ -82,5 +82,14 @@ authRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     res.json({ data: await authService.me(req.userId!) });
+  }),
+);
+
+authRouter.patch(
+  "/me",
+  requireAuth,
+  validate({ body: UpdateMeSchema }),
+  asyncHandler(async (req, res) => {
+    res.json({ data: await authService.updateMe(req.userId!, req.body) });
   }),
 );

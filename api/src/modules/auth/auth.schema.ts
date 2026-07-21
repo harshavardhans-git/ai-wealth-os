@@ -23,5 +23,19 @@ export const LoginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const UpdateMeSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    baseCurrency: z
+      .string()
+      .length(3)
+      .transform((value) => value.toUpperCase())
+      .optional(),
+  })
+  .refine((data) => data.name !== undefined || data.baseCurrency !== undefined, {
+    message: "Nothing to update",
+  });
+
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
+export type UpdateMeInput = z.infer<typeof UpdateMeSchema>;
