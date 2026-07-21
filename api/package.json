@@ -18,7 +18,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^7.9.0",
     "@wealth-os/types": "*",
     "argon2": "^0.41.1",
     "cookie-parser": "^1.4.7",
